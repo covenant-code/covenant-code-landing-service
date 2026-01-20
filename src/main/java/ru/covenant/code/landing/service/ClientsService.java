@@ -1,23 +1,26 @@
 package ru.covenant.code.landing.service;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import ru.covenant.code.landing.dto.request.ClientsRqDto;
+import ru.covenant.code.landing.dto.request.ClientsStatusRqDto;
 import ru.covenant.code.landing.dto.response.ClientsAdminRsDto;
-import ru.covenant.code.landing.mapper.ClientsMapper;
-import ru.covenant.code.landing.repository.ClientsRepository;
+import ru.covenant.code.landing.dto.response.ClientsCreateRsDto;
+import ru.covenant.code.landing.entity.Clients;
 
 import java.util.List;
+import java.util.UUID;
 
-@Service
-@RequiredArgsConstructor
-public class ClientsService {
 
-    private final ClientsRepository clientsRepository;
-    private final ClientsMapper clientsMapper;
+public interface ClientsService {
 
-    public List<ClientsAdminRsDto> getAllAdminClients() {
-        return clientsRepository.findAll().stream()
-                .map(clientsMapper::mapToClientsAdminRsDto)
-                .toList();
-    }
+    Clients getById(UUID id);
+
+    ClientsCreateRsDto create(ClientsRqDto request);
+
+    List<Clients> getAll();
+
+    Clients updateStatus(UUID id, ClientsStatusRqDto clientsStatusRqDto);
+
+    void delete(UUID id);
+
+    List<ClientsAdminRsDto> getAllAdminClients();
 }

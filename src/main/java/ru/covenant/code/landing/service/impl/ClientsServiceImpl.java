@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.covenant.code.landing.dto.request.ClientsRqDto;
 import ru.covenant.code.landing.dto.request.ClientsStatusRqDto;
+import ru.covenant.code.landing.dto.response.ClientsAdminRsDto;
 import ru.covenant.code.landing.dto.response.ClientsCreateRsDto;
 import ru.covenant.code.landing.entity.Clients;
 import ru.covenant.code.landing.entity.enumerated.Status;
@@ -109,6 +110,13 @@ public class ClientsServiceImpl implements ClientsService {
             log.error("Status равняется null");
             throw new InvalidClientsStatusException();
         }
+    }
+
+    @Override
+    public List<ClientsAdminRsDto> getAllAdminClients() {
+        return clientsRepository.findAll().stream()
+                .map(clientsMapper::mapToClientsAdminRsDto)
+                .toList();
     }
 
     public Status clientStatus(ClientsStatusRqDto clientsStatusRqDto) {
