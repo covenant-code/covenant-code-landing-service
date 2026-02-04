@@ -1,39 +1,47 @@
-version: '3.9'  # Версия синтаксиса Docker Compose
-
 services:
   postgres:
-    image: postgres:16  # Используем официальный образ PostgreSQL версии 16
-    container_name: covenant_postgres  # Имя контейнера, чтобы его проще идентифицировать
-    restart: always  # Автоматический перезапуск контейнера при падении
-    env_file:
-      - credential.env  # Подключаем файл с переменными окружения для БД
+    image: postgres:16-alpine
+    container_name: covenant_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: covenant_landing_dev
+      POSTGRES_USER: covenant
+      POSTGRES_PASSWORD: covenant123
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
     ports:
-      - "5432:5432"  # Пробрасываем порт 5432 наружу (host:container), чтобы можно было подключаться с локальной машины
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Монтируем volume для хранения данных БД, чтобы они не терялись при перезапуске контейнера
-    networks:
-      - covenant-net  # Подключаем контейнер к общей сети Docker для взаимодействия с приложением
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U covenant"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app:
-    build: .  # Собираем Docker образ приложения из текущей директории
-    container_name: covenant_app  # Имя контейнера для приложения
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: covenant_app
     depends_on:
-      - postgres  # Указываем зависимость: контейнер app стартует после postgres
-    env_file:
-      - credential.env  # Подключаем тот же файл с переменными окружения
+      postgres:
+        condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE: prod
-      # Устанавливаем активный профиль Spring Boot, чтобы использовать prod-конфигурацию с PostgreSQL
+      # Spring конфигурация
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/covenant_landing_dev
+      SPRING_DATASOURCE_USERNAME: covenant
+      SPRING_DATASOURCE_PASSWORD: covenant123
+      SPRING_JPA_DDL_AUTO: validate  # Или create-drop для первой инициализации
+      SERVER_PORT: 8080
+      ADMIN_USERNAME: admin@covenantcode.ru
+      ADMIN_PASSWORD: admin123
+      TZ: Europe/Moscow
     ports:
-      - "8082:8082"  # Пробрасываем порт приложения наружу (host:container)
-    networks:
-      - covenant-net  # Подключаем контейнер приложения к той же сети, что и БД
+      - "8080:8080"
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
 
 volumes:
   postgres_data:
-  # Определяем volume для хранения данных PostgreSQL вне контейнера (persistency)
-
-networks:
-  covenant-net:
-  # Определяем отдельную сеть Docker для изоляции сервисов и их взаимодействия

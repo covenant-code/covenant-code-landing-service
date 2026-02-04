@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- CSRF мета-теги -->
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <meta name="_csrf_parameter" th:content="${_csrf.parameterName}"/>
+    <title>Covenant Code Admin — Управление заявками</title>
+    <!-- Используем Thymeleaf для правильных путей -->
+    <link rel="stylesheet" th:href="@{/css/admin-styles.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" th:href="@{/logo.svg}" type="image/svg+xml">
+</head>
+<body>
+<div class="admin-container">
+    <!-- Боковая панель -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <!-- Логотип с Thymeleaf -->
+            <img th:src="@{/logo.svg}" alt="Covenant Code Logo" class="sidebar-logo">
+            <h1>Covenant Code</h1>
+            <p class="sidebar-subtitle">Админ-панель</p>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <h3 class="nav-title">Основное</h3>
+                <a href="#" class="nav-link active">
+                    <i class="fas fa-tasks"></i>
+                    <span>Доска заявок</span>
+                </a>
+                <a href="#" class="nav-link">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Аналитика</span>
+                </a>
+                <a href="#" class="nav-link">
+                    <i class="fas fa-users"></i>
+                    <span>Студенты</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <h3 class="nav-title">Настройки</h3>
+                <a href="#" class="nav-link">
+                    <i class="fas fa-user-cog"></i>
+                    <span>Профиль</span>
+                </a>
+                <a href="#" class="nav-link">
+                    <i class="fas fa-cog"></i>
+                    <span>Настройки</span>
+                </a>
+                <a class="nav-link logout" id="logoutLink" type="button">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Выйти</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="admin-info">
+                <div class="admin-avatar">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <div class="admin-details">
+                    <strong>Администратор</strong>
+                    <!-- Используем Thymeleaf для отображения email -->
+                    <span th:text="${#authentication?.name ?: 'admin@covenantcode.ru'}">admin@covenantcode.ru</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Основной контент -->
+    <main class="main-content">
+        <!-- Верхняя панель -->
+        <header class="admin-header">
+            <div class="header-left">
+                <h2 class="page-title">
+                    <i class="fas fa-tasks"></i>
+                    Доска заявок
+                </h2>
+                <p class="page-subtitle">Управление заявками на курс программирования</p>
+            </div>
+
+            <div class="header-right">
+                <div class="header-actions">
+                    <button class="btn btn-primary" id="refreshBtn">
+                        <i class="fas fa-sync-alt"></i>
+                        Обновить
+                    </button>
+                    <button class="btn btn-secondary" id="filterBtn">
+                        <i class="fas fa-filter"></i>
+                        Фильтры
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Панель фильтров -->
+        <div class="filter-panel" id="filterPanel">
+            <div class="filter-header">
+                <h3><i class="fas fa-filter"></i> Фильтры</h3>
+                <button class="btn-icon" id="closeFilters">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="filter-content">
+                <div class="filter-group">
+                    <label for="dateRange">Период:</label>
+                    <div class="date-range">
+                        <input type="date" id="startDate" class="date-input">
+                        <span>—</span>
+                        <input type="date" id="endDate" class="date-input">
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label for="courseType">Тип курса:</label>
+                    <select id="courseType" class="select-input">
+                        <option value="all">Все курсы</option>
+                        <option value="fullstack">Fullstack разработка</option>
+                        <option value="frontend">Frontend разработка</option>
+                        <option value="backend">Backend разработка</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Приоритет:</label>
+                    <div class="priority-filters">
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked>
+                            <span class="checkmark"></span>
+                            <span class="priority-dot high"></span>
+                            Высокий
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked>
+                            <span class="checkmark"></span>
+                            <span class="priority-dot medium"></span>
+                            Средний
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" checked>
+                            <span class="checkmark"></span>
+                            <span class="priority-dot low"></span>
+                            Низкий
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-actions">
+                    <button class="btn btn-secondary" id="applyFilters">
+                        Применить фильтры
+                    </button>
+                    <button class="btn btn-outline" id="resetFilters">
+                        Сбросить
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Статистика -->
+        <div class="stats-panel">
+            <div class="stat-card">
+                <div class="stat-icon new">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 class="stat-number" id="newCount">0</h3>
+                    <p class="stat-label">Новые заявки</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon processed">
+                    <i class="fas fa-spinner"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 class="stat-number" id="processedCount">0</h3>
+                    <p class="stat-label">В обработке</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon done">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 class="stat-number" id="doneCount">0</h3>
+                    <p class="stat-label">Обработано</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon total">
+                    <i class="fas fa-list-alt"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 class="stat-number" id="totalCount">0</h3>
+                    <p class="stat-label">Всего заявок</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Доска Kanban -->
+        <div class="kanban-board">
+            <!-- Колонка: Новые -->
+            <div class="kanban-column">
+                <div class="column-header">
+                    <div class="column-title">
+                        <span class="status-badge new">Новые</span>
+                        <span class="column-count" id="newColumnCount">0</span>
+                    </div>
+                    <div class="column-actions">
+                        <button class="btn-icon">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="column-content" id="newApplications">
+                    <!-- Заявки будут загружаться динамически -->
+                </div>
+            </div>
+
+            <!-- Колонка: В обработке -->
+            <div class="kanban-column">
+                <div class="column-header">
+                    <div class="column-title">
+                        <span class="status-badge processed">В обработке</span>
+                        <span class="column-count" id="processedColumnCount">0</span>
+                    </div>
+                    <div class="column-actions">
+                        <button class="btn-icon">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="column-content" id="processedApplications">
+                    <!-- Заявки будут загружаться динамически -->
+                </div>
+            </div>
+
+            <!-- Колонка: Обработано -->
+            <div class="kanban-column">
+                <div class="column-header">
+                    <div class="column-title">
+                        <span class="status-badge done">Обработано</span>
+                        <span class="column-count" id="doneColumnCount">0</span>
+                    </div>
+                    <div class="column-actions">
+                        <button class="btn-icon">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="column-content" id="doneApplications">
+                    <!-- Заявки будут загружаться динамически -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно изменения статуса -->
+        <div class="modal" id="statusModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Изменить статус заявки</h3>
+                    <button class="btn-icon close-modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Выберите новый статус для заявки <strong id="applicationIdText">#001</strong></p>
+
+                    <div class="status-options">
+                        <label class="status-option">
+                            <input type="radio" name="newStatus" value="NEW">
+                            <div class="status-card new">
+                                <i class="fas fa-plus-circle"></i>
+                                <span>Новая</span>
+                            </div>
+                        </label>
+
+                        <label class="status-option">
+                            <input type="radio" name="newStatus" value="PROCESSED" checked>
+                            <div class="status-card processed">
+                                <i class="fas fa-spinner"></i>
+                                <span>В обработке</span>
+                            </div>
+                        </label>
+
+                        <label class="status-option">
+                            <input type="radio" name="newStatus" value="DONE">
+                            <div class="status-card done">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Обработано</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-primary" id="confirmStatusChange">
+                            Сохранить изменения
+                        </button>
+                        <button class="btn btn-outline close-modal">
+                            Отмена
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно удаления -->
+        <div class="modal" id="deleteModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Удалить заявку</h3>
+                    <button class="btn-icon close-modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="warning-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <p>Вы уверены, что хотите удалить заявку <strong id="deleteApplicationId">#001</strong>?</p>
+                    <p class="warning-text">Это действие нельзя отменить. Все данные заявки будут удалены безвозвратно.</p>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-danger" id="confirmDelete">
+                            Да, удалить
+                        </button>
+                        <button class="btn btn-outline close-modal">
+                            Отмена
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно редактирования заявки -->
+        <div class="modal" id="editModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Редактирование заявки</h3>
+                    <button class="btn-icon close-modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form class="edit-form" id="editForm">
+                        <input type="hidden" id="editId">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editName" class="required">Имя</label>
+                                <input type="text" id="editName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editEmail" class="required">Email</label>
+                                <input type="email" id="editEmail" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editPhone">Телефон</label>
+                                <input type="tel" id="editPhone" placeholder="+7 (999) 123-45-67">
+                            </div>
+                            <div class="form-group">
+                                <label for="editCourseType" class="required">Курс</label>
+                                <select id="editCourseType" required>
+                                    <option value="">Выберите курс</option>
+                                    <option value="FULLSTACK">Fullstack разработка</option>
+                                    <option value="FRONTEND">Frontend разработка</option>
+                                    <option value="BACKEND">Backend разработка</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editStatus">Статус</label>
+                                <select id="editStatus">
+                                    <option value="NEW">Новая</option>
+                                    <option value="PROCESSED">В обработке</option>
+                                    <option value="DONE">Обработано</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editPriority">Приоритет</label>
+                                <select id="editPriority">
+                                    <option value="LOW">Низкий</option>
+                                    <option value="MEDIUM">Средний</option>
+                                    <option value="HIGH">Высокий</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editSource">Источник</label>
+                            <select id="editSource">
+                                <option value="Лендинг">Лендинг</option>
+                                <option value="Социальные сети">Социальные сети</option>
+                                <option value="Рекомендация">Рекомендация</option>
+                                <option value="Другое">Другое</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editMessage">Сообщение/Комментарий</label>
+                            <textarea id="editMessage" placeholder="Дополнительная информация от клиента или комментарий администратора..."></textarea>
+                        </div>
+                    </form>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-primary" id="confirmEdit">
+                            <i class="fas fa-save"></i> Сохранить изменения
+                        </button>
+                        <button class="btn btn-outline close-modal">
+                            Отмена
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно подтверждения выхода -->
+        <div class="modal logout-modal" id="logoutModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-sign-out-alt"></i> Выход из системы</h3>
+                    <button class="btn-icon close-modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="logout-icon">
+                        <i class="fas fa-door-open"></i>
+                    </div>
+                    <p>Вы уверены, что хотите выйти из административной панели?</p>
+                    <div class="logout-actions">
+                        <!-- ВАЖНО: здесь должен быть id="confirmLogout" -->
+                        <button class="btn confirm-logout" id="confirmLogout">
+                            <i class="fas fa-sign-out-alt"></i> Да, выйти
+                        </button>
+                        <button class="btn btn-outline close-modal">
+                            <i class="fas fa-times"></i> Отмена
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- WebSocket библиотеки -->
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<script th:src="@{/js/csrf-utils.js}"></script>
+<script th:src="@{/js/admin-script.js}"></script>
+<script>
+    function testLogout(e) {
+        e.preventDefault();
+        console.log('Logout clicked!');
+        alert('Кнопка работает!');
+    }
+</script>
+</body>
+</html>
