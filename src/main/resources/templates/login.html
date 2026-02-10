@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- CSRF токен для JavaScript -->
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <meta name="_csrf_parameter" th:content="${_csrf.parameterName}"/>
+    <title>Covenant Code — Вход в админ-панель</title>
+
+    <!-- Используем Thymeleaf для правильных путей -->
+    <link rel="stylesheet" th:href="@{/css/login-styles.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" th:href="@{/logo.svg}" type="image/svg+xml">
+
+    <!-- WebSocket библиотеки -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+<!-- Только ОДИН .login-container! -->
+<div class="login-container">
+    <!-- Левая часть с информацией -->
+    <div class="login-info">
+        <div class="login-header">
+            <img th:src="@{/logo.svg}" alt="Covenant Code Logo" class="login-logo">
+            <h1>Covenant Code</h1>
+            <p class="login-subtitle">Административная панель</p>
+        </div>
+
+        <div class="login-features">
+            <div class="feature">
+                <div class="feature-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="feature-content">
+                    <h3>Безопасный доступ</h3>
+                    <p>Доступ только для авторизованного персонала. Все данные защищены шифрованием.</p>
+                </div>
+            </div>
+
+            <div class="feature">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="feature-content">
+                    <h3>Мониторинг заявок</h3>
+                    <p>Управляйте заявками студентов, отслеживайте статистику и аналитику курсов.</p>
+                </div>
+            </div>
+
+            <div class="feature">
+                <div class="feature-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="feature-content">
+                    <h3>Уведомления в реальном времени</h3>
+                    <p>Получайте мгновенные уведомления о новых заявках и важных событиях.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Статистика -->
+        <div class="login-stats">
+            <div class="stat">
+                <div class="stat-number" id="stat-today-applications">0</div>
+                <div class="stat-label">Новых заявок за сегодня</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="stat-success-rate">0%</div>
+                <div class="stat-label">Успешных обращений</div>
+            </div>
+        </div>
+
+        <div class="login-footer">
+            <p><i class="fas fa-info-circle"></i> Для доступа требуется авторизация администратора</p>
+            <div class="stats-info">
+                <i class="fas fa-sync-alt fa-spin"></i> Статистика обновляется в реальном времени
+            </div>
+        </div>
+    </div>
+
+    <!-- Правая часть с формой (только один раз!) -->
+    <div class="login-form-container">
+        <div class="form-wrapper">
+            <div class="form-header">
+                <h2>Вход в систему</h2>
+                <p>Введите учетные данные для доступа к админ-панели</p>
+            </div>
+
+            <!-- Сообщения об ошибках/успехе -->
+            <div th:if="${param.error}" class="alert alert-error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>Неверный логин или пароль</span>
+            </div>
+
+            <div th:if="${param.logout}" class="alert alert-success">
+                <i class="fas fa-check-circle"></i>
+                <span>Вы успешно вышли из системы</span>
+            </div>
+
+            <!-- Форма для Spring Security -->
+            <form id="loginForm" class="login-form" method="post" action="/api/admin/login">
+                <!-- CSRF токен -->
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" id="csrfToken"/>
+
+                <div class="form-group">
+                    <label for="username">Email адрес</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-envelope"></i>
+                        <input type="text"
+                               id="username"
+                               name="username"
+                               placeholder="admin@covenantcode.ru"
+                               required
+                               autofocus>
+                    </div>
+                    <div class="input-hint">Используйте корпоративный email</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Пароль</label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-lock"></i>
+                        <input type="password"
+                               id="password"
+                               name="password"
+                               placeholder="••••••••"
+                               required>
+                        <button type="button" class="toggle-password" id="togglePassword">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="input-hint">Минимум 8 символов</div>
+                </div>
+
+                <div class="form-options">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="rememberMe" name="remember-me">
+                        <span class="checkmark"></span>
+                        <span class="checkbox-label">Запомнить меня на 24 часа</span>
+                    </label>
+                    <a href="#" class="forgot-password" id="forgotPassword">
+                        Забыли пароль?
+                    </a>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
+                        <span class="btn-text">Войти в систему</span>
+                        <span class="btn-loader" id="btnLoader">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                    </button>
+                </div>
+            </form>
+
+            <div class="form-footer">
+                <p><i class="fas fa-exclamation-triangle"></i> Не передавайте свои учетные данные третьим лицам</p>
+                <p class="copyright">&copy; 2024 Covenant Code. Все права защищены.</p>
+            </div>
+        </div>
+
+        <!-- Модальное окно восстановления пароля -->
+        <div class="modal" id="passwordModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Восстановление пароля</h3>
+                    <button class="btn-icon close-modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-icon">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <p>Введите email, указанный при регистрации. Мы отправим вам инструкции по восстановлению пароля.</p>
+
+                    <div class="form-group">
+                        <input type="email" id="recoveryEmail" placeholder="Ваш email" class="input-full">
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-primary" id="sendRecovery">
+                            Отправить инструкции
+                        </button>
+                        <button class="btn btn-outline close-modal">
+                            Отмена
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Уведомления -->
+        <div id="notificationContainer"></div>
+    </div>
+</div>
+
+<!-- Подключаем скрипты -->
+<script th:src="@{/js/login-script.js}" defer></script>
+<script th:src="@{/js/login-stats.js}" defer></script>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const csrfToken = /*[[${_csrf.token}]]*/ '';
+    const csrfHeaderName = /*[[${_csrf.headerName}]]*/ '';
+    const csrfParameterName = /*[[${_csrf.parameterName}]]*/ '';
+    /*]]>*/
+</script>
+</body>
+</html>

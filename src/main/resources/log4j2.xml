@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+
+    <Properties>
+        <Property name="LOG_PATTERN">%d{HH:mm:ss.SSS} [%t] %-5level %c{36} - %msg%n</Property>
+        <Property name="LOG_PATTERN_DETAILED">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} [%M:%L] - %msg%n</Property>
+        <Property name="LOG_DIR">logs</Property>
+        <Property name="MAX_LOG_FILES">30</Property>
+        <Property name="MAX_FILE_SIZE">50MB</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Консольный аппендер с цветами -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%highlight{%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n}{FATAL=red, ERROR=red, WARN=yellow, INFO=green, DEBUG=cyan, TRACE=blue}"/>
+        </Console>
+
+        <!-- Файловый аппендер для всех логов -->
+        <RollingFile name="File" fileName="${LOG_DIR}/application.log"
+                     filePattern="${LOG_DIR}/application-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN_DETAILED}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+                <SizeBasedTriggeringPolicy size="${MAX_FILE_SIZE}"/>
+            </Policies>
+            <DefaultRolloverStrategy max="${MAX_LOG_FILES}"/>
+        </RollingFile>
+
+        <!-- Отдельный файл для Spring Security -->
+        <RollingFile name="SecurityFile" fileName="${LOG_DIR}/security.log"
+                     filePattern="${LOG_DIR}/security-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN_DETAILED}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
+
+        <!-- Отдельный файл для Hibernate SQL -->
+        <RollingFile name="HibernateFile" fileName="${LOG_DIR}/hibernate.log"
+                     filePattern="${LOG_DIR}/hibernate-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN_DETAILED}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
+
+        <!-- Отдельный файл для HTTP запросов -->
+        <RollingFile name="HttpFile" fileName="${LOG_DIR}/http.log"
+                     filePattern="${LOG_DIR}/http-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN_DETAILED}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <!-- Наше приложение - максимальная детализация -->
+        <Logger name="ru.covenant.code.landing" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Logger>
+
+        <!-- Spring Security - детальное логирование -->
+        <Logger name="org.springframework.security" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="SecurityFile"/>
+        </Logger>
+
+        <Logger name="org.springframework.security.web" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console" level="DEBUG"/>
+            <AppenderRef ref="SecurityFile"/>
+        </Logger>
+
+        <Logger name="org.springframework.security.authentication" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="SecurityFile"/>
+        </Logger>
+
+        <Logger name="org.springframework.security.web.authentication" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="SecurityFile"/>
+        </Logger>
+
+        <!-- Spring Web - логирование HTTP запросов -->
+        <Logger name="org.springframework.web" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="HttpFile"/>
+        </Logger>
+
+        <Logger name="org.springframework.web.filter.CommonsRequestLoggingFilter" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="HttpFile"/>
+        </Logger>
+
+        <!-- Hibernate SQL -->
+        <Logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console" level="DEBUG"/>
+            <AppenderRef ref="HibernateFile"/>
+        </Logger>
+
+        <Logger name="org.hibernate.type.descriptor.sql" level="TRACE" additivity="false">
+            <AppenderRef ref="Console" level="TRACE"/>
+            <AppenderRef ref="HibernateFile"/>
+        </Logger>
+
+        <Logger name="org.hibernate.stat" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="HibernateFile"/>
+        </Logger>
+
+        <!-- Thymeleaf -->
+        <Logger name="org.thymeleaf" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Logger>
+
+        <!-- Spring Data JPA -->
+        <Logger name="org.springframework.data.jpa" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Logger>
+
+        <!-- Tomcat -->
+        <Logger name="org.apache.catalina" level="INFO"/>
+        <Logger name="org.apache.tomcat" level="INFO"/>
+        <Logger name="org.apache.coyote" level="INFO"/>
+
+        <!-- Корневой логгер -->
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Root>
+    </Loggers>
+
+</Configuration>
