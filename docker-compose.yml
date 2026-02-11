@@ -2,38 +2,54 @@ version: '3.9'  # Версия синтаксиса Docker Compose
 
 services:
   postgres:
-    image: postgres:16  # Используем официальный образ PostgreSQL версии 16
-    container_name: covenant_postgres  # Имя контейнера, чтобы его проще идентифицировать
-    restart: always  # Автоматический перезапуск контейнера при падении
-    env_file:
-      - credential.env  # Подключаем файл с переменными окружения для БД
+    image: postgres:16-alpine  # Используем облегчённый официальный образ PostgreSQL 16
+    container_name: covenant_postgres  # Явное имя контейнера БД
+    restart: unless-stopped  # Перезапуск при падении
+    environment:
+      POSTGRES_DB: covenant_landing_dev # Подключаем файл с переменными (POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD)
+      POSTGRES_USER: covenant
+      POSTGRES_PASSWORD: covenant123
     ports:
-      - "5432:5432"  # Пробрасываем порт 5432 наружу (host:container), чтобы можно было подключаться с локальной машины
+      - "5432:5432"  # Пробрасываем порт БД наружу для локального подключения
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Монтируем volume для хранения данных БД, чтобы они не терялись при перезапуске контейнера
-    networks:
-      - covenant-net  # Подключаем контейнер к общей сети Docker для взаимодействия с приложением
+      # Volume для хранения данных БД (persistency)
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+      # Автоматическое выполнение init-db.sql при первом старте контейнера
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app:
-    build: .  # Собираем Docker образ приложения из текущей директории
-    container_name: covenant_app  # Имя контейнера для приложения
+    build: # Собираем образ приложения из Dockerfile в текущей директории
+      context: .
+      dockerfile: Dockerfile
+    container_name: covenant_app  # Явное имя контейнера приложения
+    restart: unless-stopped  # Автоперезапуск при падении
     depends_on:
-      - postgres  # Указываем зависимость: контейнер app стартует после postgres
-    env_file:
-      - credential.env  # Подключаем тот же файл с переменными окружения
+      postgres:
+        condition: service_healthy
+        # Приложение стартует только после успешного healthcheck PostgreSQL
     environment:
-      SPRING_PROFILES_ACTIVE: prod
-      # Устанавливаем активный профиль Spring Boot, чтобы использовать prod-конфигурацию с PostgreSQL
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/covenant_landing_dev
+      SPRING_DATASOURCE_USERNAME: covenant
+      SPRING_DATASOURCE_PASSWORD: covenant123
+      # Переопределяем datasource для работы внутри Docker-сети
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+
+      ADMIN_USERNAME: admin@covenantcode.ru
+      ADMIN_PASSWORD: admin123
+
+      TZ: Europe/Moscow
+
+      SERVER_PORT: 8080
+      # Указываем порт, который приложение будет слушать внутри контейнера
     ports:
-      - "8082:8082"  # Пробрасываем порт приложения наружу (host:container)
-    networks:
-      - covenant-net  # Подключаем контейнер приложения к той же сети, что и БД
-
+      - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
+      # Пробрасываем приложение наружу: host 8080 -> container 8082
 volumes:
-  postgres_data:
-  # Определяем volume для хранения данных PostgreSQL вне контейнера (persistency)
-
-networks:
-  covenant-net:
-  # Определяем отдельную сеть Docker для изоляции сервисов и их взаимодействия
+  progress_data:

@@ -1,41 +1,119 @@
+app:
+  admin:
+    default-page-size: 20
+    max-page-size: 100
+  security:
+    csrf-enabled: false
+    frame-options: SAMEORIGIN
+
 spring:
   application:
-    name: covenant-code-landing-service  # Имя приложения, используется в логах и метаданных
+    name: covenant-code-landing-service
 
-  config:
-    activate:
-      on-profile: dev  # Этот блок активен только при профиле "dev"
 
   datasource:
-    driver-class-name: org.h2.Driver  # Класс драйвера для подключения к базе H2
-    url: jdbc:h2:mem:landing-db;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    # URL базы данных H2 в памяти
-    # MODE=PostgreSQL — делает поведение H2 максимально похожим на Postgres
-    # DB_CLOSE_DELAY=-1 — база не удаляется после закрытия соединения
-    # DB_CLOSE_ON_EXIT=FALSE — база не закрывается при выходе из приложения
-    username: sa  # Пользователь для подключения к H2
-    password: ""  # Пароль для подключения (пустой)
-
-  h2:
-    console:
-      enabled: true  # Включает веб-консоль H2 для просмотра данных
-      path: /h2-console  # URL, по которому доступна консоль
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/covenant_landing_dev
+    username: covenant
+    password: covenant123
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      pool-name: LandingHikariPool
 
   jpa:
     hibernate:
-      ddl-auto: update  # Автоматическое обновление структуры базы по сущностям JPA
-    show-sql: false  # Не выводить SQL-запросы в консоль (можно включить для отладки)
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          lob:
+            non_contextual_creation: true
+        temp:
+          use_jdbc_metadata_defaults: false
+        format_sql: true
+
+
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
+
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    cache: false
+    check-template-location: true
+    encoding: UTF-8
+
+  devtools:
+    restart:
+      enabled: true
+      additional-paths: src/main/resources/templates, src/main/resources/static
+    livereload:
+      enabled: true
+
+  mvc:
+    static-path-pattern: /**
+
+  web:
+    resources:
+      static-locations: classpath:/static/,classpath:/public/,classpath:/META-INF/resources/
+      cache:
+        period: 0
+      chain:
+        cache: false
+        compressed: false
+
+  security:
+    user:
+      name: admin@covenantcode.ru
+      password: admin123
+      roles: ADMIN
+admin:
+  username: admin@covenantcode.ru
+  password: admin123
 
 server:
-  port: 8080  # Порт, на котором запускается приложение
+  port: 8081
+  servlet:
+    context-path: /
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        secure: true
+        same-site: lax
 
----
-spring:
-  config:
-    activate:
-      on-profile: prod  # Этот блок активен только при профиле "prod"
+springdoc:
+  api-docs:
+    path: /api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true
+    doc-expansion: none
+    filter: true
+    persist-authorization: true
+    show-actuator: false
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+  writer-with-default-pretty-printer: true
 
-  datasource:
-    url: ${SPRING_DATASOURCE_URL}  # JDBC URL для Postgres, подставляется из переменной окружения
-    username: ${SPRING_DATASOURCE_USERNAME}  # Имя пользователя Postgres из переменной окружения
-    password: ${SPRING_DATASOURCE_PASSWORD}  # Пароль Postgres из переменной окружения
+logging:
+  config: classpath:log4j2.xml
+  file:
+    name: logs/application.log
+  level:
+    root: INFO
+    org.springframework: INFO
+    org.hibernate: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    ru.covenant.code: INFO
