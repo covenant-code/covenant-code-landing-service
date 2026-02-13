@@ -1,55 +1,47 @@
-version: '3.9'  # Версия синтаксиса Docker Compose
-
 services:
   postgres:
-    image: postgres:16-alpine  # Используем облегчённый официальный образ PostgreSQL 16
-    container_name: covenant_postgres  # Явное имя контейнера БД
-    restart: unless-stopped  # Перезапуск при падении
+    image: postgres:16-alpine
+    container_name: covenant_postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: covenant_landing_dev # Подключаем файл с переменными (POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD)
+      POSTGRES_DB: covenant_landing_dev
       POSTGRES_USER: covenant
       POSTGRES_PASSWORD: covenant123
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
     ports:
-      - "5432:5432"  # Пробрасываем порт БД наружу для локального подключения
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Volume для хранения данных БД (persistency)
       - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
-      # Автоматическое выполнение init-db.sql при первом старте контейнера
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: ["CMD-SHELL", "pg_isready -U covenant"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   app:
-    build: # Собираем образ приложения из Dockerfile в текущей директории
+    build:
       context: .
       dockerfile: Dockerfile
-    container_name: covenant_app  # Явное имя контейнера приложения
-    restart: unless-stopped  # Автоперезапуск при падении
+    container_name: covenant_app
     depends_on:
       postgres:
         condition: service_healthy
-        # Приложение стартует только после успешного healthcheck PostgreSQL
     environment:
+      # Spring конфигурация
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/covenant_landing_dev
       SPRING_DATASOURCE_USERNAME: covenant
       SPRING_DATASOURCE_PASSWORD: covenant123
-      # Переопределяем datasource для работы внутри Docker-сети
-      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
-
+      SPRING_JPA_DDL_AUTO: validate  # Или create-drop для первой инициализации
+      SERVER_PORT: 8080
       ADMIN_USERNAME: admin@covenantcode.ru
       ADMIN_PASSWORD: admin123
-
       TZ: Europe/Moscow
-
-      SERVER_PORT: 8080
-      # Указываем порт, который приложение будет слушать внутри контейнера
     ports:
       - "8080:8080"
+    restart: unless-stopped
     volumes:
       - ./logs:/app/logs
-      # Пробрасываем приложение наружу: host 8080 -> container 8082
+
 volumes:
-  progress_data:
+  postgres_data:
