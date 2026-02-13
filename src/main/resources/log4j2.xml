@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+    <Properties>
+        <Property name="LOG_DIR">logs</Property>
+        <Property name="MAX_FILES">30</Property>
+        <Property name="MAX_SIZE">50MB</Property>
+        <Property name="MAX_SIZE_SPECIAL">10MB</Property>
+        <Property name="MAX_FILES_SPECIAL">10</Property>
+
+        <Property name="LOG_PATTERN">%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+        <Property name="LOG_PATTERN_DETAILED">%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}.%M\(%line\) -
+            %msg%n
+        </Property>
+
+    </Properties>
+
+    <Appenders>
+        <Console name="CONSOLE" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %highlight{%-5level} %logger{36} - %msg%n"
+                           disableAnsi="false">
+                <Colors>
+                    <Color name="red" level="FATAL"/>
+                    <Color name="red" level="ERROR"/>
+                    <Color name="yellow" level="WARN"/>
+                    <Color name="green" level="INFO"/>
+                    <Color name="cyan" level="DEBUG"/>
+                    <Color name="blue" level="TRACE"/>
+                </Colors>
+            </PatternLayout>
+        </Console>
+
+        <!-- Основной файловый аппендер -->
+        <RollingFile name="SecurityFile" fileName="${LOG_DIR}/security.log"
+                     filePattern="${LOG_DIR}/security-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN_DETAILED}"/>
+            <Policies>
+                <TimeBasedTriggerPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="${MAX_FILES}"/>
+            </Policies>
+            <DefaultRolloverStrategy max="${MAX_FILES}"/>
+        </RollingFile>
+
+        <!-- SecurityFile -->
+        <RollingFile name="SecurityFile" fileName="${LOG_DIR}/application.log"
+                     filePattern="${LOG_DIR}/application-%d{yyyy-MM-dd}-%i.log.gz">
+            <Policies>
+                <TimeBasedTriggerPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="${MAX_FILES}"/>
+            </Policies>
+            <DefaultRolloverStrategy max="${MAX_FILES}"/>
+        </RollingFile>
+
+        <!-- HibernateFile -->
+        <RollingFile name="HibernateFile" fileName="${LOG_DIR}/hibernate.log"
+                     filePattern="${LOG_DIR}/hibernate-%d{yyyy-MM-dd}-%i.log.gz">
+            <Policies>
+                <TimeBasedTriggerPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="${MAX_FILES}"/>
+            </Policies>
+            <DefaultRolloverStrategy max="${MAX_FILES}"/>
+        </RollingFile>
+
+        <!-- HttpFile -->
+        <RollingFile name="HttpFile" fileName="${LOG_DIR}/http.log"
+                     filePattern="${LOG_DIR}/http-%d{yyyy-MM-dd}-%i.log.gz">
+            <Policies>
+                <TimeBasedTriggerPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="${MAX_FILES}"/>
+            </Policies>
+            <DefaultRolloverStrategy max="${MAX_FILES}"/>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <!--Логгеры нашего приложения -->
+        <Logger name="ru.covenant.code.landing" level="DEBUG" additivity="">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Logger>
+
+        <!--Логгеры Spring Security-->
+        <Logger name="org.springframework.security" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Logger>
+
+        <Logger name="org.springframework.security.web" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Logger>
+
+        <Logger name="org.springframework.security.authentication" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Logger>
+
+        <Logger name="org.springframework.security.web.authentication" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Logger>
+
+        <!-- Логгеры Spring Web -->
+
+        <Logger name="org.springframework.web" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="HttpFile"/>
+        </Logger>
+
+        <Logger name="org.springframework.web.filter.CommonsRequestLoggingFilter" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="HttpFile"/>
+        </Logger>
+
+        <!-- Логгеры Hibernate -->
+        <Logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="HibernateFile"/>
+        </Logger>
+
+        <Logger name="org.hibernate.type.descriptor.sql" level="TRACE" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="HibernateFile"/>
+        </Logger>
+
+        <Logger name="org.hibernate.stat" level="TRACE" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="HibernateFile"/>
+        </Logger>
+
+        <!-- Логгеры Thymeleaf -->
+        <Logger name="org.thymeleaf" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Logger>
+
+        <!-- Логгеры Spring Data JPA-->
+        <Logger name="org.springframework.data.jpa" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Logger>
+
+        <!-- Логгеры Tomcat -->
+        <Logger name="org.apache.catalina" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="MainFile"/>
+        </Logger>
+
+        <Logger name="org.apache.tomcat" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="MainFile"/>
+        </Logger>
+
+        <Logger name="org.apache.coyote" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="MainFile"/>
+        </Logger>
+
+        <!-- Корневой логгер (Root) -->
+
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="MainFile"/>
+        </Root>
+
+    </Loggers>
+
+</Configuration>
