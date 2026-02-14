@@ -1,22 +1,19 @@
-package ru.covenant.code.landing;
+package ru.covenant.code.landing.config;
 
-import jakarta.validation.ConstraintViolation;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.MessageSource;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.validation.Validator;
-import ru.covenant.code.landing.dto.TestDto;
-
 
 import java.util.Locale;
-import java.util.Set;
 
-import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest
+@ActiveProfiles("test")  // Используем тестовый профиль
 class ValidationConfigTest {
 
     @Autowired

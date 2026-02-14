@@ -1,12 +1,12 @@
-package ru.covenant.code.landing;
+package ru.covenant.code.landing.entity;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import ru.covenant.code.landing.entity.AdminUser;
 import ru.covenant.code.landing.entity.enumerated.AdminPermission;
 import ru.covenant.code.landing.entity.enumerated.AdminRole;
 
 import static org.junit.jupiter.api.Assertions.*;
+
 
 class AdminUserTest {
 

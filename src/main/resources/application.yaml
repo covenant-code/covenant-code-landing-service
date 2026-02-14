@@ -9,6 +9,9 @@ app:
 spring:
   application:
     name: covenant-code-landing-service
+  messages:
+    basename: messages
+    encoding: UTF-8
 
 
   datasource:
