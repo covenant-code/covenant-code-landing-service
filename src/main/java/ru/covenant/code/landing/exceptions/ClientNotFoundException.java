@@ -1,6 +1,7 @@
 package ru.covenant.code.landing.exceptions;
 
 import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.HttpStatus;
 
@@ -9,6 +10,7 @@ import java.util.UUID;
 
 import static java.lang.String.*;
 
+@Getter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ClientNotFoundException extends BusinessException {
 
