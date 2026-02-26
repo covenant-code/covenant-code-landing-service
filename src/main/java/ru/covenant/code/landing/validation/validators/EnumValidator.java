@@ -22,7 +22,7 @@ public class EnumValidator implements ConstraintValidator<ValidEnum, String> {
             return nullable;
         }
         try {
-            Enum.valueOf((Class<Enum>) enumClass, s.toUpperCase());
+            Enum.valueOf((Class) enumClass, s.toUpperCase());
             return true;
         } catch (IllegalArgumentException e) {
             return false;

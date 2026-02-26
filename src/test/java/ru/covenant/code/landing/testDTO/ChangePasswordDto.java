@@ -1,6 +1,6 @@
 package ru.covenant.code.landing.testDTO;
 
-import ru.covenant.code.landing.validation.contraints.PasswordMatch;
+import ru.covenant.code.landing.validation.constraints.PasswordMatch;
 
 @PasswordMatch
 public class ChangePasswordDto {

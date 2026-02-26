@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Covenant Code — Освой программирование с нуля до работы</title>
+    <!-- Используем Thymeleaf для правильных путей -->
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" th:href="@{/logo.svg}" type="image/svg+xml">
+
+    <!-- Подключаем скрипт лендинга -->
+    <script th:src="@{/js/landing.js}" defer></script>
+</head>
+<body>
+<header class="header">
+    <div class="header__inner container">
+        <img th:src="@{/logo.svg}" alt="Covenant Code Logo" class="header__logo">
+        <nav class="header__nav">
+            <a href="#about-us" class="header__link">О курсе</a>
+            <a href="#advantages" class="header__link">Преимущества</a>
+            <a href="#program" class="header__link">Программа</a>
+            <a href="#apply" class="header__link header__link--button">Начать учиться</a>
+        </nav>
+        <button class="header__menu-btn" id="menuBtn" aria-label="Открыть меню">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+</header>
+
+<main class="main">
+    <section class="hero-section">
+        <div class="hero-content container">
+            <p class="hero-badge"><i class="fas fa-rocket"></i> Старт нового потока: 15 октября</p>
+            <h1 class="hero-title">Стань <span class="highlight">востребованным</span> программистом за 8 месяцев</h1>
+            <p class="hero-subtitle">Полное погружение в разработку с индивидуальным наставником, реальными проектами в портфолио и гарантией трудоустройства</p>
+            <div class="hero-cta">
+                <a href="#apply" class="button-link button-primary">
+                    <i class="fas fa-file-signature"></i> Записаться на курс
+                </a>
+                <a href="#program" class="button-link button-secondary">
+                    <i class="fas fa-play-circle"></i> Смотреть программу
+                </a>
+            </div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-number">94%</span>
+                    <span class="stat-text">выпускников нашли работу</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">8</span>
+                    <span class="stat-text">месяцев обучения</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">24/7</span>
+                    <span class="stat-text">поддержка наставника</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-background"></div>
+    </section>
+
+    <section class="about-us container" id="about-us">
+        <div class="about-content">
+            <h2 class="section-title">Не просто курс, а <span class="highlight">путь в IT</span></h2>
+            <p class="section-subtitle">Covenant Code — это интенсивная программа, созданная практикующими senior-разработчиками из ведущих компаний. Мы не просто учим языкам, мы формируем мышление инженера.</p>
+
+            <div class="about-features">
+                <div class="feature">
+                    <div class="feature-icon">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <h3>Персональный наставник</h3>
+                    <p>Каждому студенту назначается ментор, который будет вести вас от первой строчки кода до первого рабочего места.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">
+                        <i class="fas fa-briefcase"></i>
+                    </div>
+                    <h3>Реальные проекты</h3>
+                    <p>Вы создадите 4 полноценных проекта для портфолио, включая коммерческое приложение для реального заказчика.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <h3>Гарантия трудоустройства</h3>
+                    <p>Если в течение 6 месяцев после окончания вы не найдете работу — мы вернем 100% стоимости курса.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="advantages-section" id="advantages">
+        <div class="container">
+            <h2 class="section-title section-title-center">Почему выбирают <span class="highlight">Covenant Code</span></h2>
+            <p class="section-subtitle section-subtitle-center">Наши выпускники работают в Яндекс, Тинькофф, VK и других топовых компаниях</p>
+
+            <div class="advantages-grid">
+                <div class="advantage-card">
+                    <div class="advantage-number">01</div>
+                    <h3>С нуля до Junior за 8 месяцев</h3>
+                    <p>Продуманная программа без "воды". Только необходимые навыки для быстрого старта карьеры.</p>
+                    <ul class="advantage-list">
+                        <li><i class="fas fa-check-circle"></i> Frontend: HTML, CSS, JavaScript, React</li>
+                        <li><i class="fas fa-check-circle"></i> Backend: Node.js, Python, базы данных</li>
+                        <li><i class="fas fa-check-circle"></i> DevOps основы: Git, Docker, деплой</li>
+                    </ul>
+                </div>
+
+                <div class="advantage-card">
+                    <div class="advantage-number">02</div>
+                    <h3>Карьерный трекер</h3>
+                    <p>Помогаем составить резюме, подготовиться к собеседованиям и проводим симуляции интервью.</p>
+                    <ul class="advantage-list">
+                        <li><i class="fas fa-check-circle"></i> Подготовка резюме и портфолио</li>
+                        <li><i class="fas fa-check-circle"></i> 10 симуляций технических собеседований</li>
+                        <li><i class="fas fa-check-circle"></i> Доступ к базе компаний-партнеров</li>
+                    </ul>
+                </div>
+
+                <div class="advantage-card">
+                    <div class="advantage-number">03</div>
+                    <h3>Комьюнити и поддержка</h3>
+                    <p>Закрытое сообщество студентов и выпускников, регулярные митапы и карьерные консультации.</p>
+                    <ul class="advantage-list">
+                        <li><i class="fas fa-check-circle"></i> Закрытый Discord с 500+ участниками</li>
+                        <li><i class="fas fa-check-circle"></i> Еженедельные разборы кода с ментором</li>
+                        <li><i class="fas fa-check-circle"></i> Пожизненный доступ к обновлениям курса</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section" id="apply">
+        <div class="container">
+            <div class="cta-content">
+                <h2 class="cta-title">Готовы изменить свою жизнь?</h2>
+                <p class="cta-subtitle">Оставьте заявку и получите бесплатный пробный урок + консультацию по карьерному пути в IT</p>
+
+                <form class="cta-form" id="applicationForm" novalidate>
+                    <div class="form-group">
+                        <input type="text"
+                               placeholder="Ваше имя"
+                               required
+                               id="name"
+                               aria-label="Ваше имя">
+                        <input type="email"
+                               placeholder="Email"
+                               required
+                               id="email"
+                               aria-label="Email адрес">
+                        <input type="tel"
+                               placeholder="Телефон"
+                               id="phone"
+                               aria-label="Номер телефона"
+                               pattern="\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}"
+                               title="Формат: +7 (999) 999-99-99">
+                    </div>
+                    <button type="submit" class="button-link button-primary button-large">
+                        <i class="fas fa-paper-plane"></i> Получить консультацию
+                    </button>
+                    <p class="form-note">Нажимая кнопку, вы соглашаетесь с обработкой персональных данных</p>
+                </form>
+
+                <div class="cta-stats">
+                    <div class="cta-stat">
+                        <span>Мест в новом потоке:</span>
+                        <strong>18 из 25</strong>
+                    </div>
+                    <div class="cta-stat">
+                        <span>До старта осталось:</span>
+                        <strong>14 дней</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer class="footer">
+    <div class="footer-content container">
+        <div class="footer-column">
+            <img th:src="@{/logo.svg}" alt="Logo" class="footer-logo">
+            <p class="footer-about">Covenant Code — школа программирования, которая превращает новичков в востребованных специалистов.</p>
+            <div class="social-links">
+                <a href="#" aria-label="Telegram"><i class="fab fa-telegram"></i></a>
+                <a href="#" aria-label="ВКонтакте"><i class="fab fa-vk"></i></a>
+                <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+                <a href="#" aria-label="GitHub"><i class="fab fa-github"></i></a>
+            </div>
+        </div>
+
+        <div class="footer-column">
+            <h3>Контакты</h3>
+            <div class="contact-info">
+                <div class="contact-line">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Москва, ул. Тверская, д. 7</span>
+                </div>
+                <div class="contact-line">
+                    <i class="fas fa-phone"></i>
+                    <span>+7 (495) 123-45-67</span>
+                </div>
+                <div class="contact-line">
+                    <i class="fas fa-envelope"></i>
+                    <span>hello@covenantcode.ru</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-column">
+            <h3>Навигация</h3>
+            <div class="links">
+                <a href="#about-us"><i class="fas fa-chevron-right"></i> О курсе</a>
+                <a href="#advantages"><i class="fas fa-chevron-right"></i> Преимущества</a>
+                <a href="#program"><i class="fas fa-chevron-right"></i> Программа</a>
+                <a href="#apply"><i class="fas fa-chevron-right"></i> Отправить заявку</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-copyright container">
+        <p>&copy; 2023 Covenant Code. Все права защищены.</p>
+        <div class="footer-links">
+            <a href="#">Политика конфиденциальности</a>
+            <a href="#">Договор-оферта</a>
+        </div>
+    </div>
+</footer>
+</body>
+</html>

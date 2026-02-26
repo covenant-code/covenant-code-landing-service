@@ -1,6 +1,6 @@
 package ru.covenant.code.landing.testDTO;
 
-import ru.covenant.code.landing.validation.contraints.ValidEmail;
+import ru.covenant.code.landing.validation.constraints.ValidEmail;
 import jakarta.validation.constraints.NotBlank;
 
 

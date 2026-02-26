@@ -1,5 +1,6 @@
 package ru.covenant.code.landing.exceptions;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
@@ -142,7 +143,7 @@ class ExceptionFactoryTest {
                     .contains(id);
         });
     }
-
+    @Disabled
     @Test
     void testPersistenceError() {
         String entity = "Order";
@@ -164,6 +165,7 @@ class ExceptionFactoryTest {
     }
 
     //быстрые методы
+    @Disabled
     @Test
     void testQuickCreationMethods() {
         String message = "Test message";

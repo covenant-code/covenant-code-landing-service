@@ -1,6 +1,6 @@
 package ru.covenant.code.landing.testDTO;
 
-import ru.covenant.code.landing.validation.contraints.ValidDateRange;
+import ru.covenant.code.landing.validation.constraints.ValidDateRange;
 
 import java.time.LocalDate;
 

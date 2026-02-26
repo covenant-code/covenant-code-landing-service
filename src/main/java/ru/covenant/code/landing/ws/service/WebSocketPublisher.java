@@ -1,14 +1,15 @@
 package ru.covenant.code.landing.ws.service;
 
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import ru.covenant.code.landing.dto.client.response.ClientsAdminRsDto;
+import ru.covenant.code.landing.dto.client.response.ClientsStatsRsDto;
+import ru.covenant.code.landing.dto.client.response.LoginStatsRsDto;
+import ru.covenant.code.landing.service.client.LoginStatsService;
 import ru.covenant.code.landing.ws.dto.WebSocketMessageDto;
-
-import java.util.Map;
 
 @Log4j2
 @Service
@@ -92,7 +93,7 @@ public class WebSocketPublisher {
         try {
             log.debug("Начало сбора и публикации статистики логинов");
 
-            var stats = loginStatsService.getCurrentStats();
+            var stats = loginStatsService.getLoginPageStats();
             var message = new WebSocketMessageDto();
             message.setType("LOGIN_STATS_UPDATED");
             message.setStats(stats);
