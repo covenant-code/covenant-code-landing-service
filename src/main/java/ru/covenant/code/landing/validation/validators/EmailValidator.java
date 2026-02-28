@@ -1,6 +1,6 @@
 package ru.covenant.code.landing.validation.validators;
 
-import ru.covenant.code.landing.validation.contraints.ValidEmail;
+import ru.covenant.code.landing.validation.constraints.ValidEmail;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 

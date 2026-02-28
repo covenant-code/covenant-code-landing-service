@@ -1,6 +1,6 @@
 package ru.covenant.code.landing.validation.validators;
 
-import ru.covenant.code.landing.validation.contraints.ValidDateRange;
+import ru.covenant.code.landing.validation.constraints.ValidDateRange;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import org.springframework.beans.BeanWrapper;

@@ -1,4 +1,4 @@
-package ru.covenant.code.landing.validation.contraints;
+package ru.covenant.code.landing.validation.constraints;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
