@@ -40,7 +40,7 @@ public class SecurityConfig {
                         "/ws/**", "/topic/**", "/app/**",
                         "/api/test/**", "/api/log/**",
                         "/api/v1/clients/login/stats", "/actuator/health", "/error",
-                        "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**"
+                        "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**", "/api/v1/clients/example"
                 ))
                 .authorizeHttpRequests(auth -> auth
 
@@ -86,7 +86,8 @@ public class SecurityConfig {
                                 "/error",
                                 "/api/v1/clients/login/stats",
                                 "/api/v1/clients",
-                                "/api/v1/clients/courses"
+                                "/api/v1/clients/courses",
+                                "/api/v1/clients/example"
                         ).permitAll()
 
                         // WebSocket endpoints
