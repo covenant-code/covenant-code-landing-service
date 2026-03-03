@@ -6,11 +6,12 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Этап 2: Запуск
-FROM amazoncorretto:21-alpine
+FROM amazoncorretto:21
 
 WORKDIR /app
 
-COPY target/*.jar app.jar
+# Копируем JAR из первого этапа (builder)
+COPY --from=builder /app/target/*.jar app.jar
 
 # Создаем пользователя для безопасности
 # RUN addgroup -S spring && adduser -S spring -G spring
