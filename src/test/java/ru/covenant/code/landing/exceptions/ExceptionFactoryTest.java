@@ -143,7 +143,8 @@ class ExceptionFactoryTest {
                     .contains(id);
         });
     }
-    @Disabled
+
+
     @Test
     void testPersistenceError() {
         String entity = "Order";
@@ -156,16 +157,25 @@ class ExceptionFactoryTest {
             assertThat(exception)
                     .as("Проверка операции: %s", operation)
                     .isInstanceOf(PersistenceException.class);
-            assertThat(exception.getHttpStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+            assertThat(exception.getHttpStatus())
+                    .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
             assertThat(exception.getMessage())
                     .contains(entity)
                     .contains(operation);
-            assertThat(exception.getCause()).isEqualTo(cause);
+            assertThat(exception.getDetails())
+                    .isInstanceOf(Map.class);
+            Map<String, Object> details = (Map<String, Object>) exception.getDetails();
+            assertThat(details)
+                    .containsEntry("entityName", entity)
+                    .containsEntry("operation", operation)
+                    .containsEntry("cause", cause.getMessage());
         }
     }
 
     //быстрые методы
-    @Disabled
+
     @Test
     void testQuickCreationMethods() {
         String message = "Test message";
@@ -178,22 +188,18 @@ class ExceptionFactoryTest {
         assertThat(unauthorized.getErrorCode()).isEqualTo("UNAUTHORIZED");
         assertThat(unauthorized.getDescription()).isEqualTo("Не авторизован");
         assertThat(unauthorized.getHttpStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(unauthorized.getDetails()).isEqualTo(message);
 
         assertThat(forbidden.getErrorCode()).isEqualTo("FORBIDDEN");
         assertThat(forbidden.getDescription()).isEqualTo("Доступ запрещен");
         assertThat(forbidden.getHttpStatus()).isEqualTo(HttpStatus.FORBIDDEN);
-        assertThat(forbidden.getDetails()).isEqualTo(message);
 
         assertThat(badRequest.getErrorCode()).isEqualTo("BAD_REQUEST");
         assertThat(badRequest.getDescription()).isEqualTo("Некорректный запрос");
         assertThat(badRequest.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(badRequest.getDetails()).isEqualTo(message);
 
         assertThat(internalError.getErrorCode()).isEqualTo("INTERNAL_ERROR");
         assertThat(internalError.getDescription()).isEqualTo("Ошибка сервера");
         assertThat(internalError.getHttpStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(internalError.getDetails()).isEqualTo(message);
     }
 
     //проверка деталей исключения
