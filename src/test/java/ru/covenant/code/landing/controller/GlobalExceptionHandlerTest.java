@@ -1,4 +1,4 @@
-package ru.covenant.code.landing.controller.advice;
+package ru.covenant.code.landing.controller;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -43,6 +43,7 @@ spring:
     init:
       mode: always
       continue-on-error: true
+      schema-locations: file:./init-db.sql
 
   thymeleaf:
     prefix: classpath:/templates/
@@ -81,7 +82,7 @@ admin:
   password: admin123
 
 server:
-  port: 8081
+  port: 8080
   servlet:
     context-path: /
     session:

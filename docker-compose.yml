@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16
     container_name: covenant_postgres
     restart: unless-stopped
     environment:
@@ -32,7 +32,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/covenant_landing_dev
       SPRING_DATASOURCE_USERNAME: covenant
       SPRING_DATASOURCE_PASSWORD: covenant123
-      SPRING_JPA_DDL_AUTO: validate  # Или create-drop для первой инициализации
+      SPRING_JPA_DDL_AUTO: update  # Или create-drop для первой инициализации
       SERVER_PORT: 8080
       ADMIN_USERNAME: admin@covenantcode.ru
       ADMIN_PASSWORD: admin123
