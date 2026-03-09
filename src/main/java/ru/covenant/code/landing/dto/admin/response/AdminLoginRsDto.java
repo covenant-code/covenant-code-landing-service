@@ -1,12 +1,16 @@
 package ru.covenant.code.landing.dto.admin.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder
 @Schema(description = "Ответ на аутентификацию администратора")
+@NoArgsConstructor
+@AllArgsConstructor
 public class AdminLoginRsDto {
 
     @Schema(description = "Успешность операции", example = "true")

@@ -14,10 +14,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,16 +36,16 @@ public class AdminAuthController {
     @Operation(
             summary = "Аутентификация администратора (API)",
             description = """
-            Аутентификация администратора через REST API. Возвращает JSON ответ.
-            
-            После успешной аутентификации:
-            1. Устанавливается cookie JSESSIONID
-            2. Создается сессия на сервере
-            3. Для последующих запросов используйте тот же JSESSIONID
-            
-            ### CSRF защита отключена для этого endpoint
-            ### Для веб-интерфейса используйте /login форму
-            """
+                    Аутентификация администратора через REST API. Возвращает JSON ответ.
+                    
+                    После успешной аутентификации:
+                    1. Устанавливается cookie JSESSIONID
+                    2. Создается сессия на сервере
+                    3. Для последующих запросов используйте тот же JSESSIONID
+                    
+                    ### CSRF защита отключена для этого endpoint
+                    ### Для веб-интерфейса используйте /login форму
+                    """
     )
     @ApiResponses({
             @ApiResponse(
@@ -66,31 +62,7 @@ public class AdminAuthController {
     @PostMapping("/login")
     public ResponseEntity<ResponseWrapper<AdminLoginRsDto>> login(@Valid @RequestBody AdminLoginRqDto loginRequest) {
         try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginRequest.getEmail(),
-                            loginRequest.getPassword()
-                    )
-            );
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-
-
-            adminUserService.updateLastLogin(loginRequest.getEmail());
-
-            String role = authentication.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .findFirst()
-                    .map(auth -> auth.replace("ROLE_", ""))
-                    .orElse("ADMIN");
-
-            AdminLoginRsDto response = AdminLoginRsDto.builder()
-                    .success(true)
-                    .message("Авторизация успешна")
-                    .authenticated(true)
-                    .email(loginRequest.getEmail())
-                    .role(role)
-                    .build();
-            return ResponseEntity.ok(ResponseWrapper.success(response));
+            return ResponseEntity.ok(ResponseWrapper.success(adminUserService.updateLastLogin(loginRequest)));
         } catch (BadCredentialsException e) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)

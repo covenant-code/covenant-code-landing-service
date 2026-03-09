@@ -43,93 +43,65 @@ class AdminAuthControllerTest {
     @Mock
     private AdminUserServiceImpl adminUserService;
 
-    @Mock
-    private Authentication authentication;
-
     @InjectMocks
     private AdminAuthController adminAuthController;
 
     private ObjectMapper objectMapper;
     private AdminLoginRqDto validLoginRequest;
     private AdminLoginRqDto invalidLoginRequest;
+    private AdminLoginRsDto successResponse;
 
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
 
-        // Подготовка валидного запроса
         validLoginRequest = new AdminLoginRqDto();
         validLoginRequest.setEmail("admin@covenantcode.ru");
         validLoginRequest.setPassword("admin123");
 
-        // Подготовка невалидного запроса
         invalidLoginRequest = new AdminLoginRqDto();
         invalidLoginRequest.setEmail("wrong@covenantcode.ru");
         invalidLoginRequest.setPassword("wrongpass");
+
+        successResponse = AdminLoginRsDto.builder()
+                .success(true)
+                .message("Авторизация успешна")
+                .authenticated(true)
+                .email(validLoginRequest.getEmail())
+                .role("ADMIN")
+                .build();
     }
 
     @Test
     @DisplayName("Успешная аутентификация - должен вернуть 200 OK с данными пользователя и ролью")
     void login_Success_ShouldReturn200WithUserDataAndRole() {
-        // Arrange
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenReturn(authentication);
+        when(adminUserService.updateLastLogin(validLoginRequest)).thenReturn(successResponse);
 
-        // Используем thenAnswer вместо thenReturn
-        when(authentication.getAuthorities()).thenAnswer(invocation ->
-                List.of((GrantedAuthority) () -> "ROLE_ADMIN")
-        );
+        ResponseEntity<ResponseWrapper<AdminLoginRsDto>> response = adminAuthController.login(validLoginRequest);
 
-        doNothing().when(adminUserService).updateLastLogin(anyString());
-
-        // Act
-        ResponseEntity<ResponseWrapper<AdminLoginRsDto>> response =
-                adminAuthController.login(validLoginRequest);
-
-        // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(adminUserService, times(1)).updateLastLogin("admin@covenantcode.ru");
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().isSuccess());
+        assertNotNull(response.getBody().getResult());
+        assertEquals("ADMIN", response.getBody().getResult().getRole());
+        assertEquals(validLoginRequest.getEmail(), response.getBody().getResult().getEmail());
+        assertNull(response.getBody().getError());
+
+        verify(adminUserService, times(1)).updateLastLogin(validLoginRequest);
+        verifyNoInteractions(authenticationManager);
     }
 
-    @Test
-    @DisplayName("Успешная аутентификация с разными ролями - проверка всех ролей")
-    void login_WithDifferentRoles_ShouldReturnCorrectRole() {
-        // Arrange
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenReturn(authentication);
 
-        List<String> roles = List.of("SUPER_ADMIN", "ADMIN", "MODERATOR", "SUPPORT");
-
-        for (String expectedRole : roles) {
-            // Вместо reset используем новую настройку для каждой роли
-            Collection<GrantedAuthority> authorities = List.of(
-                    new SimpleGrantedAuthority("ROLE_" + expectedRole)
-            );
-            doReturn(authorities).when(authentication).getAuthorities();
-
-            // Act
-            ResponseEntity<ResponseWrapper<AdminLoginRsDto>> response =
-                    adminAuthController.login(validLoginRequest);
-
-            // Assert
-            assertEquals(HttpStatus.OK, response.getStatusCode());
-            assertNotNull(response.getBody());
-            assertEquals(expectedRole, response.getBody().getResult().getRole());
-        }
-    }
 
     @Test
     @DisplayName("Неверные учетные данные - должен вернуть 401 UNAUTHORIZED с кодом AUTHENTICATION_FAILED")
     void login_BadCredentials_ShouldReturn401WithAuthenticationFailedCode() {
-        // Arrange
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+
+        when(adminUserService.updateLastLogin(invalidLoginRequest))
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 
-        // Act
-        ResponseEntity<ResponseWrapper<AdminLoginRsDto>> response =
-                adminAuthController.login(invalidLoginRequest);
+        ResponseEntity<ResponseWrapper<AdminLoginRsDto>> response = adminAuthController.login(invalidLoginRequest);
 
-        // Assert
         assertAll(
                 () -> assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode()),
                 () -> assertNotNull(response.getBody()),
@@ -141,21 +113,18 @@ class AdminAuthControllerTest {
                 () -> assertEquals("Проверьте email и пароль", response.getBody().getError().getMessage())
         );
 
-        verify(adminUserService, never()).updateLastLogin(anyString());
+        verify(adminUserService, times(1)).updateLastLogin(invalidLoginRequest);
     }
 
     @Test
     @DisplayName("Заблокированный пользователь - должен вернуть 401 UNAUTHORIZED с сообщением о блокировке")
     void login_DisabledUser_ShouldReturn401WithBlockedMessage() {
-        // Arrange
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+        when(adminUserService.updateLastLogin(validLoginRequest))
                 .thenThrow(new DisabledException("Учетная запись заблокирована"));
 
-        // Act
         ResponseEntity<ResponseWrapper<AdminLoginRsDto>> response =
                 adminAuthController.login(validLoginRequest);
 
-        // Assert
         assertAll(
                 () -> assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode()),
                 () -> assertNotNull(response.getBody()),
@@ -163,95 +132,40 @@ class AdminAuthControllerTest {
                 () -> assertNull(response.getBody().getResult()),
                 () -> assertNotNull(response.getBody().getError()),
                 () -> assertEquals("AUTHENTICATION_ERROR", response.getBody().getError().getCode()),
-                () -> assertEquals("Пользователя не существует", response.getBody().getError().getDescription())
+                () -> assertEquals("Пользователя не существует", response.getBody().getError().getDescription()),
+                () -> assertEquals("Учетная запись заблокирована", response.getBody().getError().getMessage())
         );
 
-        verify(adminUserService, never()).updateLastLogin(anyString());
+        verify(adminUserService, times(1)).updateLastLogin(validLoginRequest);
     }
 
     @Test
-    @DisplayName("Несуществующий пользователь - должен вернуть 401 UNAUTHORIZED")
-    void login_UserNotFound_ShouldReturn401() {
-        // Arrange
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenThrow(new BadCredentialsException("User not found"));
+    @DisplayName("Неизвестная ошибка сервиса - должен вернуть 401 UNAUTHORIZED")
+    void login_GenericException_ShouldReturn401() {
+        String errorMessage = "Database connection error";
+        when(adminUserService.updateLastLogin(validLoginRequest))
+                .thenThrow(new RuntimeException(errorMessage));
 
-        // Act
-        ResponseEntity<ResponseWrapper<AdminLoginRsDto>> response =
-                adminAuthController.login(invalidLoginRequest);
+        ResponseEntity<ResponseWrapper<AdminLoginRsDto>> response = adminAuthController.login(validLoginRequest);
 
-        // Assert
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertFalse(response.getBody().isSuccess());
-        assertNotNull(response.getBody().getError());
-    }
-
-    @Test
-    @DisplayName("Ошибка при обновлении lastLogin - не должна влиять на успешную аутентификацию")
-    void login_UpdateLastLoginFails_ShouldStillReturn200() {
-        // Arrange
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenReturn(authentication);
-
-        Collection<GrantedAuthority> authorities = List.of(
-                new SimpleGrantedAuthority("ROLE_ADMIN")
-        );
-        doReturn(authorities).when(authentication).getAuthorities();
-
-        // ВАЖНО: НЕ выбрасываем исключение, а просто ничего не делаем
-        // Контроллер не должен получать исключение из сервиса
-        doNothing().when(adminUserService).updateLastLogin(anyString());
-
-        // Act
-        ResponseEntity<ResponseWrapper<AdminLoginRsDto>> response =
-                adminAuthController.login(validLoginRequest);
-
-        // Assert
         assertAll(
-                () -> assertEquals(HttpStatus.OK, response.getStatusCode()),
+                () -> assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode()),
                 () -> assertNotNull(response.getBody()),
-                () -> assertTrue(response.getBody().isSuccess()),
-                () -> assertNotNull(response.getBody().getResult()),
-                () -> assertEquals("admin@covenantcode.ru", response.getBody().getResult().getEmail()),
-                () -> assertEquals("ADMIN", response.getBody().getResult().getRole())
+                () -> assertFalse(response.getBody().isSuccess()),
+                () -> assertNull(response.getBody().getResult()),
+                () -> assertNotNull(response.getBody().getError()),
+                () -> assertEquals("AUTHENTICATION_ERROR", response.getBody().getError().getCode()),
+                () -> assertEquals("Пользователя не существует", response.getBody().getError().getDescription()),
+                () -> assertEquals(errorMessage, response.getBody().getError().getMessage())
         );
 
-        verify(adminUserService, times(1)).updateLastLogin("admin@covenantcode.ru");
-    }
-
-    @Test
-    @DisplayName("Проверка структуры JSON при успешной аутентификации")
-    void login_Success_ShouldHaveCorrectJsonStructure() throws Exception {
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenReturn(authentication);
-
-        Collection<GrantedAuthority> authorities = List.of(
-                new SimpleGrantedAuthority("ROLE_ADMIN")  // Используем SimpleGrantedAuthority
-        );
-
-        doReturn(authorities).when(authentication).getAuthorities();
-
-        doNothing().when(adminUserService).updateLastLogin(anyString());
-
-        ResponseEntity<ResponseWrapper<AdminLoginRsDto>> response =
-                adminAuthController.login(validLoginRequest);
-
-        String jsonResponse = objectMapper.writeValueAsString(response.getBody());
-
-        assertAll(
-                () -> assertTrue(jsonResponse.contains("\"success\":true")),
-                () -> assertTrue(jsonResponse.contains("\"result\"")),
-                () -> assertTrue(jsonResponse.contains("\"email\":\"admin@covenantcode.ru\"")),
-                () -> assertTrue(jsonResponse.contains("\"role\":\"ADMIN\"")),
-                () -> assertFalse(jsonResponse.contains("\"error\""))
-        );
+        verify(adminUserService, times(1)).updateLastLogin(validLoginRequest);
     }
 
     @Test
     @DisplayName("Проверка структуры JSON при ошибке аутентификации")
     void login_Error_ShouldHaveCorrectErrorStructure() throws Exception {
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+        when(adminUserService.updateLastLogin(invalidLoginRequest))
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 
         ResponseEntity<ResponseWrapper<AdminLoginRsDto>> response =
