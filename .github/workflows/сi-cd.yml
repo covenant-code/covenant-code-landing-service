@@ -46,9 +46,14 @@ jobs:
   deploy:
     name: Deploy (Docker Compose over SSH)
     runs-on: ubuntu-latest
-    needs: [build, test]
+    needs: [build]
     # Используем ref вместо ref_name для надежности
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
+    if: github.event_name == 'push' && (
+      github.ref == 'refs/heads/main' || 
+      github.ref == 'refs/heads/master' || 
+      github.ref == 'refs/heads/develop' || 
+      github.ref == 'refs/heads/newdevelop'
+      )
     steps:
       # Отладка
       - name: Debug deployment trigger
