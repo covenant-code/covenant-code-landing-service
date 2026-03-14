@@ -2,6 +2,7 @@ package ru.covenant.code.landing.controller;
 
 
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.context.ActiveProfiles;
 import ru.covenant.code.landing.dto.client.response.CourseInfoDto;
 import ru.covenant.code.landing.error.ResponseWrapper;
 import org.junit.jupiter.api.DisplayName;
@@ -18,7 +19,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
-@AutoConfigureMockMvc   // поднимает весь контекст приложения
+@AutoConfigureMockMvc // поднимает весь контекст приложения
+@ActiveProfiles("test")
 public class ClientsControllerIntegrationTest {
 
     @Autowired
