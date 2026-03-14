@@ -2,7 +2,7 @@ name: CI/CD
 
 on:
   push:
-    branches: [ "develop", "main", "master" ]
+    branches: [ "develop", "main", "master", "newdevelop" ]
   pull_request:
     branches: [ "develop" ]
 
@@ -70,45 +70,35 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT || 22 }}
           script: |
-            set -e
+            set -euo pipefail
 
-            # 1) обновляем код на сервере
-            if [ ! -d "${{ secrets.DEPLOY_PATH }}/.git" ]; then
-              mkdir -p "${{ secrets.DEPLOY_PATH }}"
-              git clone https://github.com/${{ github.repository }}.git "${{ secrets.DEPLOY_PATH }}"
-            fi
+            DEPLOY_PATH="/opt/covenant-code-landing-service"
 
-            # Создаем директорию если нет
-            DEPLOY_PATH="${{ secrets.DEPLOY_PATH || '/var/www/app' }}"
             mkdir -p "$DEPLOY_PATH"
 
-            cd "${{ secrets.DEPLOY_PATH }}"
-            
-            git fetch --all --prune
-            git checkout ${{ github.ref_name }}
-            git reset --hard origin/${{ github.ref_name }}
+            if [ ! -d "$DEPLOY_PATH/.git" ]; then
+            git clone https://github.com/${{ github.repository }}.git "$DEPLOY_PATH"
+            fi
 
-            # 2) Создаем .env файл из секретов
-            cat > .env << EOF
-            # PostgreSQL Settings
+            cd "$DEPLOY_PATH"
+            git fetch --all --prune
+            git checkout "${{ github.ref_name }}"
+            git reset --hard "origin/${{ github.ref_name }}"
+
+            cat > .env << 'EOF'
             POSTGRES_DB=${{ secrets.DB_NAME }}
             POSTGRES_USER=${{ secrets.DB_USER }}
             POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
-
-            # Spring Boot Datasource
             SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${{ secrets.DB_NAME }}
             SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USER }}
             SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }}
             SPRING_DATASOURCE_HOST=postgres
-
-            # Application Settings
             SERVER_PORT=8080
             SPRING_PROFILES_ACTIVE=prod
             EOF
 
-            # 3) пересобираем/поднимаем контейнеры
             docker compose pull || true
             docker compose up -d --build
 
-            # 4) чистим старые образы (по желанию)
-            docker image prune -f
+            docker image prune -f 
+          
