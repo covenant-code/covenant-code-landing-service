@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface ClientsService {
     List<ClientsAdminRsDto> getAllClients(ClientsFilterRqDto filter);
+    List<ClientsAdminRsDto> getClientsByStatus(String status);
 }

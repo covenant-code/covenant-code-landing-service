@@ -4,6 +4,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
+import org.springframework.stereotype.Component;
 import ru.covenant.code.landing.dto.client.response.ClientsAdminRsDto;
 import ru.covenant.code.landing.entity.Clients;
 import ru.covenant.code.landing.entity.enumerated.Priority;
@@ -14,7 +15,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Mapper(
-        componentModel = "spring",
+        componentModel = "spring",  // ЭТО ВАЖНО! Делает маппер Spring bean'ом
         unmappedTargetPolicy = ReportingPolicy.IGNORE
 )
 public interface ClientsMapper {

@@ -54,6 +54,7 @@ public class Clients {
     @Column(nullable = false)
     Priority priority = Priority.MEDIUM;
 
+    @Builder.Default
     @Column
     String source = "Лендинг";
 
@@ -64,7 +65,7 @@ public class Clients {
 
     @UpdateTimestamp
     @Column(name = "updated_at",
-    nullable = false)
+            nullable = false)
     OffsetDateTime updatedAt;
 
     @Column( name = "processed_by")

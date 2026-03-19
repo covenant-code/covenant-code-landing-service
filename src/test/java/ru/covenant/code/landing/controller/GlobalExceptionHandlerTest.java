@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import ru.covenant.code.landing.controller.advice.GlobalExceptionHandler;
 import ru.covenant.code.landing.error.ErrorResponse;
 import ru.covenant.code.landing.error.ResponseWrapper;
 import ru.covenant.code.landing.exceptions.AdminNotFoundException;

@@ -1,6 +1,7 @@
 package ru.covenant.code.landing.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ru.covenant.code.landing.dto.client.request.ClientsFilterRqDto;
@@ -22,6 +24,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/admin/clients")
 @RequiredArgsConstructor
+@Tag(name = "Админ контроллер", description = "Управление клиентами")
 @Tag(name = "Админка: Клиенты", description = "Управление заявками клиентов для администраторов")
 @SecurityRequirement(name = "bearerAuth")
 public class AdminClientsController {
@@ -57,4 +60,33 @@ public class AdminClientsController {
         List<ClientsAdminRsDto> clients = clientsService.getAllClients(filter);
         return ResponseWrapper.success(clients);
     }
+
+
+        @GetMapping("/status/{status}")
+        @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'SUPPORT')")
+        @Operation(
+                summary = "Получить клиентов по статусу",
+                description = "Возвращает список клиентов с указанным статусом"
+        )
+        @ApiResponses({
+                @ApiResponse(responseCode = "200", description = "Успешно получен список клиентов"),
+                @ApiResponse(responseCode = "400", description = "Некорректный статус"),
+                @ApiResponse(responseCode = "401", description = "Требуется аутентификация"),
+                @ApiResponse(responseCode = "403", description = "Недостаточно прав")
+        })
+        public ResponseWrapper<List<ClientsAdminRsDto>> getClientsByStatus(
+                @Parameter(
+                        description = "Статус клиента (NEW, PROCESSED, DONE)",
+                        example = "NEW",
+                        required = true,
+                        schema = @Schema(
+                                allowableValues = {"NEW", "PROCESSED", "DONE"},
+                                type = "string"
+                        )
+                )
+                @PathVariable String status) {
+
+            List<ClientsAdminRsDto> clients = clientsService.getClientsByStatus(status);
+            return ResponseWrapper.success(clients);
+        }
 }
