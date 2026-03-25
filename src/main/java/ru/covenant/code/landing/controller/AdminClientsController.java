@@ -8,23 +8,23 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import ru.covenant.code.landing.dto.client.request.ClientsFilterRqDto;
+import ru.covenant.code.landing.dto.client.request.ClientsUpdateRqDto;
 import ru.covenant.code.landing.dto.client.response.ClientsAdminRsDto;
+import ru.covenant.code.landing.entity.Clients;
 import ru.covenant.code.landing.error.ResponseWrapper;
 import ru.covenant.code.landing.service.client.ClientsService;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/admin/clients")
 @RequiredArgsConstructor
-@Tag(name = "Админ контроллер", description = "Управление клиентами")
 @Tag(name = "Админка: Клиенты", description = "Управление заявками клиентов для администраторов")
 @SecurityRequirement(name = "bearerAuth")
 public class AdminClientsController {
@@ -88,5 +88,39 @@ public class AdminClientsController {
 
             List<ClientsAdminRsDto> clients = clientsService.getClientsByStatus(status);
             return ResponseWrapper.success(clients);
+        }
+
+        @PutMapping("/{id}")
+        @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR', 'SUPPORT')")
+        @Operation(
+                summary = "Обновить данные клиента",
+                description = """
+                    Обновляет информацию о клиенте.
+                    При указании processedBy автоматически устанавливается processedAt.
+                    Null значения в запросе игнорируются.
+                    
+                    Доступно для ADMIN, MODERATOR, SUPPORT.
+                    """
+        )
+        @ApiResponses(value = {
+                @ApiResponse(responseCode = "200", description = "Клиент успешно обновлен"),
+                @ApiResponse(responseCode = "400", description = "Неверные данные запроса"),
+                @ApiResponse(responseCode = "401", description = "Не авторизован"),
+                @ApiResponse(responseCode = "403", description = "Доступ запрещен"),
+                @ApiResponse(responseCode = "404", description = "Клиент не найден"),
+                @ApiResponse(responseCode = "500", description = "Внутренняя ошибка сервера")
+        })
+        public ResponseWrapper<ClientsAdminRsDto> updateClient (
+                @Parameter(
+                        description = "",
+                        required = true,
+                        example = "123e4567-e89b-12d3-a456-426614174000"
+                )
+                @PathVariable UUID id,
+                @Parameter(description = "Данные для обновления клиента")
+                @Valid @RequestBody ClientsUpdateRqDto updateDto)
+        {
+            ClientsAdminRsDto updatedClient = clientsService.updateClient(id, updateDto);
+            return ResponseWrapper.success(updatedClient);
         }
 }

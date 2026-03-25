@@ -1,12 +1,11 @@
 package ru.covenant.code.landing.mapper;
 
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Named;
-import org.mapstruct.ReportingPolicy;
+import org.mapstruct.*;
 import org.springframework.stereotype.Component;
+import ru.covenant.code.landing.dto.client.request.ClientsUpdateRqDto;
 import ru.covenant.code.landing.dto.client.response.ClientsAdminRsDto;
 import ru.covenant.code.landing.entity.Clients;
+import ru.covenant.code.landing.entity.enumerated.CourseType;
 import ru.covenant.code.landing.entity.enumerated.Priority;
 import ru.covenant.code.landing.entity.enumerated.Status;
 
@@ -53,5 +52,62 @@ public interface ClientsMapper {
     @Named("offsetDateTimeToString")
     default String offsetDateTimeToString(OffsetDateTime value) {
         return value != null ? value.toString() : null;
+    }
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "courseType", source = "courseType", qualifiedByName = "stringToCourseType")
+    @Mapping(target = "status", source = "status", qualifiedByName = "stringToStatus")
+    @Mapping(target = "priority", source = "priority", qualifiedByName = "stringToPriority")
+    @Mapping(target = "email", source = "email")
+    @Mapping(target = "phone", source = "phone")
+    @Mapping(target = "source", source = "source")
+    @Mapping(target = "message", source = "message")
+    @Mapping(target = "updatedAt", expression = "java(java.time.OffsetDateTime.now())")
+    @Mapping(target = "processedBy", ignore = true)
+    @Mapping(target = "processedAt", ignore = true)
+    void updateEntity(@MappingTarget Clients clients, ClientsUpdateRqDto dto);
+
+    @AfterMapping
+    default void setProcessed(@MappingTarget Clients clients, ClientsUpdateRqDto dto){
+        if(dto.getProcessedBy() != null && !dto.getProcessedBy().isBlank()){
+            clients.setProcessedBy(dto.getProcessedBy());
+            clients.setProcessedAt(OffsetDateTime.now());
+        }
+    }
+
+    @Named("stringToCourseType")
+    default CourseType stringToCourseType(String courseType) {
+        if (courseType == null || courseType.isBlank()) {
+            return null;
+        }
+        try {
+            return CourseType.valueOf(courseType.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    @Named("stringToStatus")
+    default Status stringToStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        try {
+            return Status.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    @Named("stringToPriority")
+    default Priority stringToPriority(String priority) {
+        if (priority == null || priority.isBlank()) {
+            return null;
+        }
+        try {
+            return Priority.valueOf(priority.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

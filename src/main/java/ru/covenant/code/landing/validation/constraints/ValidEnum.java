@@ -2,6 +2,7 @@ package ru.covenant.code.landing.validation.constraints;
 
 
 import jakarta.validation.Constraint;
+import jakarta.validation.Payload;
 import ru.covenant.code.landing.validation.validators.EnumValidator;
 
 import java.lang.annotation.*;
@@ -19,5 +20,9 @@ public @interface ValidEnum {
 
 
     boolean nullable() default false;
+
+    Class<?>[] groups() default {};
+
+    Class<? extends Payload>[] payload() default {};
 
 }

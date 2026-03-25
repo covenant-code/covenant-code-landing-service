@@ -1,5 +1,8 @@
 package ru.covenant.code.landing.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import ru.covenant.code.landing.dto.client.request.ClientsUpdateRqDto;
 import ru.covenant.code.landing.entity.Clients;
 import ru.covenant.code.landing.entity.enumerated.CourseType;
 import ru.covenant.code.landing.entity.enumerated.Priority;
@@ -20,10 +24,12 @@ import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -36,9 +42,17 @@ public class AdminClientsControllerIntegrationTest {
     @Autowired
     private ClientsRepository clientsRepository;
 
+    private ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+    private UUID testClientId;
+    private OffsetDateTime now;
+
     @BeforeEach
     void setUp() {
         clientsRepository.deleteAll();
+        now = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         createTestClients();
     }
 
@@ -103,7 +117,9 @@ public class AdminClientsControllerIntegrationTest {
                         .build()
         );
 
-        clientsRepository.saveAll(testClients);
+        List<Clients> savedClients = clientsRepository.saveAll(testClients);
+
+        testClientId = savedClients.get(2).getId();
     }
 
     @Test
@@ -212,6 +228,87 @@ public class AdminClientsControllerIntegrationTest {
     void endpointWithInsufficientPermissions() throws Exception {
         mockMvc.perform(get("/api/v1/admin/clients")
                         .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/admin/clients/{id} – успешное обновление всех полей")
+    @WithMockUser(username = "admin@covenantcode.ru", roles = "ADMIN")
+    void updateClient_WithFullUpdate_ShouldReturnUpdatedClient() throws Exception {
+        ClientsUpdateRqDto updateDto = ClientsUpdateRqDto.builder()
+                .name("Иван Иванов")
+                .email("ivan.ivanov@example.com")
+                .phone("+79998887766")
+                .message("Обновленное сообщение")
+                .courseType("BACKEND")
+                .status("PROCESSED")
+                .priority("HIGH")
+                .source("Телефон")
+                .processedBy("admin@covenantcode.ru")
+                .build();
+
+        mockMvc.perform(put("/api/v1/admin/clients/{id}", testClientId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.result.name").value("Иван Иванов"))
+                .andExpect(jsonPath("$.result.status").value("PROCESSED"))
+                .andExpect(jsonPath("$.result.processedBy").value("admin@covenantcode.ru"));
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/admin/clients/{id} – клиент не найден возвращает 404")
+    @WithMockUser(username = "admin@covenantcode.ru", roles = "ADMIN")
+    void updateClient_WithNonExistentId_ShouldReturnNotFound() throws Exception {
+        UUID nonExistentId = UUID.randomUUID();
+        ClientsUpdateRqDto updateDto = ClientsUpdateRqDto.builder()
+                .name("Иван")
+                .email("ivan@example.com")
+                .courseType("BACKEND")
+                .status("NEW")
+                .priority("MEDIUM")
+                .build();
+
+        mockMvc.perform(put("/api/v1/admin/clients/{id}", nonExistentId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("CLIENT_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/admin/clients/{id} – доступ без аутентификации")
+    void updateClient_WithoutAuthentication_ShouldReturnUnauthorized() throws Exception {
+        ClientsUpdateRqDto updateDto = ClientsUpdateRqDto.builder()
+                .name("Иван")
+                .email("ivan@example.com")
+                .courseType("BACKEND")
+                .status("NEW")
+                .priority("MEDIUM")
+                .build();
+
+        mockMvc.perform(put("/api/v1/admin/clients/{id}", testClientId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/admin/clients/{id} – доступ с недостаточными правами")
+    @WithMockUser(username = "user@example.com", roles = "USER")
+    void updateClient_WithInsufficientPermissions_ShouldReturnForbidden() throws Exception {
+        ClientsUpdateRqDto updateDto = ClientsUpdateRqDto.builder()
+                .name("Иван")
+                .email("ivan@example.com")
+                .build();
+
+        mockMvc.perform(put("/api/v1/admin/clients/{id}", testClientId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isForbidden());
     }
 }
