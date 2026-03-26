@@ -1,7 +1,6 @@
 package ru.covenant.code.landing.mapper;
 
 import org.mapstruct.*;
-import org.springframework.stereotype.Component;
 import ru.covenant.code.landing.dto.client.request.ClientsUpdateRqDto;
 import ru.covenant.code.landing.dto.client.response.ClientsAdminRsDto;
 import ru.covenant.code.landing.entity.Clients;
@@ -15,7 +14,9 @@ import java.util.List;
 
 @Mapper(
         componentModel = "spring",  // ЭТО ВАЖНО! Делает маппер Spring bean'ом
-        unmappedTargetPolicy = ReportingPolicy.IGNORE
+        unmappedTargetPolicy = ReportingPolicy.IGNORE,
+        nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE,
+        nullValueCheckStrategy = NullValueCheckStrategy.ALWAYS
 )
 public interface ClientsMapper {
 
@@ -55,9 +56,9 @@ public interface ClientsMapper {
     }
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "courseType", source = "courseType", qualifiedByName = "stringToCourseType")
-    @Mapping(target = "status", source = "status", qualifiedByName = "stringToStatus")
-    @Mapping(target = "priority", source = "priority", qualifiedByName = "stringToPriority")
+    @Mapping(target = "courseType", source = "courseType", qualifiedByName = "stringToCourseType", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "status", source = "status", qualifiedByName = "stringToStatus", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "priority", source = "priority", qualifiedByName = "stringToPriority", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "email", source = "email")
     @Mapping(target = "phone", source = "phone")
     @Mapping(target = "source", source = "source")

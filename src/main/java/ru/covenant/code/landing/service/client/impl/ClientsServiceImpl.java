@@ -114,6 +114,18 @@ public class ClientsServiceImpl implements ClientsService {
 
             ClientsAdminRsDto response = clientsMapper.toAdminResponse(updateClients);
 
+//            // 1. Предварительная валидация формата (email, phone)
+//            // 2. Очистка невалидных enum-значений, чтобы MapStruct их проигнорировал
+//            ClientsUpdateRqDto validatedDto = sanitizeAndValidateDto(dto);
+//
+//            // MapStruct обновит только те поля, которые не null в validatedDto
+//            clientsMapper.updateEntity(client, validatedDto);
+//
+//            Clients updatedClient = clientsRepository.save(client);
+//            ClientsAdminRsDto response = clientsMapper.toAdminResponse(updatedClient);
+
+
+
             try {
                 publisher.publishApplicationUpdated(response);
 
@@ -133,6 +145,21 @@ public class ClientsServiceImpl implements ClientsService {
             throw ExceptionFactory.persistenceError("Clients", "обновление", e);        }
 
 
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public ClientsAdminRsDto getClientById(UUID id) {
+        log.info("Поиск пользователя по id {}", id);
+
+        Clients clients = clientsRepository.findById(id).orElseThrow(
+                ()-> {
+                    log.warn("Пользователь с id {} не найден", id);
+                    return ExceptionFactory.clientNotFound(id);
+                }
+        );
+
+        log.debug("Пользователь с id {}", id);
+        return clientsMapper.toAdminResponse(clients);
     }
 
     private void validateClientUpdate(ClientsUpdateRqDto dto) {

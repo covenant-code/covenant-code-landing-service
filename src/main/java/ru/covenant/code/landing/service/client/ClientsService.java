@@ -12,4 +12,7 @@ public interface ClientsService {
     List<ClientsAdminRsDto> getAllClients(ClientsFilterRqDto filter);
     List<ClientsAdminRsDto> getClientsByStatus(String status);
     ClientsAdminRsDto updateClient(UUID id, ClientsUpdateRqDto dto);
+
+    ClientsAdminRsDto getClientById(UUID id);
+
 }

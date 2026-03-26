@@ -1,14 +1,16 @@
 package ru.covenant.code.landing.dto.client.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import ru.covenant.code.landing.entity.enumerated.CourseType;
 import ru.covenant.code.landing.entity.enumerated.Priority;
 import ru.covenant.code.landing.entity.enumerated.Status;
 
 import java.util.UUID;
 
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Getter
 @Setter
 @Schema(description = "Данные клиента для административной панели")

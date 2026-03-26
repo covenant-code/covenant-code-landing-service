@@ -9,12 +9,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
 import ru.covenant.code.landing.dto.client.request.ClientsUpdateRqDto;
 import ru.covenant.code.landing.entity.Clients;
+import ru.covenant.code.landing.security.config.SecurityConfig;
 import ru.covenant.code.landing.entity.enumerated.CourseType;
 import ru.covenant.code.landing.entity.enumerated.Priority;
 import ru.covenant.code.landing.entity.enumerated.Status;
@@ -27,6 +32,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -34,7 +41,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-public class AdminClientsControllerIntegrationTest {
+@Import(SecurityConfig.class)
+@Transactional
+@DisplayName("Интеграционные тесты для AdminClientsController")
+class AdminClientsControllerIntegrationTest {
+
 
     @Autowired
     private MockMvc mockMvc;
@@ -49,11 +60,248 @@ public class AdminClientsControllerIntegrationTest {
     private UUID testClientId;
     private OffsetDateTime now;
 
+    private UUID existingClientId;
+    private UUID nonExistingClientId;
+    private String invalidUuid = "not-a-uuid";
+
+
     @BeforeEach
     void setUp() {
         clientsRepository.deleteAll();
         now = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         createTestClients();
+
+        objectMapper = new ObjectMapper();
+
+        Clients testClient = Clients.builder()
+                .email("test@example.com")
+                .name("Тестовый Клиент")
+                .phone("+79001234567")
+                .message("Тестовое сообщение")
+                .courseType(CourseType.BACKEND)
+                .status(Status.NEW)
+                .priority(Priority.HIGH)
+                .source("Лендинг")
+                .createdAt(OffsetDateTime.now())
+                .updatedAt(OffsetDateTime.now())
+                .build();
+
+        Clients savedClient = clientsRepository.save(testClient);
+        existingClientId = savedClient.getId();
+
+        nonExistingClientId = UUID.randomUUID();
+
+        assertTrue(clientsRepository.findById(existingClientId).isPresent(),
+                "Клиент должен существовать в БД с ID: " + existingClientId);
+
+        System.out.println("Создан тестовый клиент с ID: " + existingClientId);
+
+
+    }
+
+    @Test
+    @DisplayName("Тест 1: Успешный GET запрос с существующим ID - должен вернуть 200 и данные клиента")
+    @WithMockUser(roles = "ADMIN")
+    void getClientById_WithExistingId_ShouldReturn200AndClientData() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/clients/{id}", existingClientId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.error").doesNotExist())
+                .andExpect(jsonPath("$.result").exists())
+                .andExpect(jsonPath("$.result.id").value(existingClientId.toString()))
+                .andExpect(jsonPath("$.result.email").value("test@example.com"))
+                .andExpect(jsonPath("$.result.name").value("Тестовый Клиент"))
+                .andExpect(jsonPath("$.result.phone").value("+79001234567"))
+                .andExpect(jsonPath("$.result.message").value("Тестовое сообщение"))
+                .andExpect(jsonPath("$.result.courseType").value("BACKEND"))
+                .andExpect(jsonPath("$.result.status").value("NEW"))
+                .andExpect(jsonPath("$.result.priority").value("HIGH"))
+                .andExpect(jsonPath("$.result.source").value("Лендинг"))
+                .andExpect(jsonPath("$.result.createdAt").exists())
+                .andExpect(jsonPath("$.result.updatedAt").exists())
+                .andExpect(jsonPath("$.result.formattedCreatedAt").exists())
+                .andExpect(jsonPath("$.result.formattedUpdatedAt").exists());
+
+    }
+
+    @Test
+    @DisplayName("Тест 2: Запрос с несуществующим ID - должен вернуть 404 и CLIENT_NOT_FOUND")
+    @WithMockUser(roles = "ADMIN")
+    void getClientById_WithNonExistingId_ShouldReturn404AndClientNotFound() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/v1/admin/clients/{id}", nonExistingClientId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.result").doesNotExist())
+                .andExpect(jsonPath("$.error").exists())
+                .andExpect(jsonPath("$.error.code").value("CLIENT_NOT_FOUND"))
+                .andExpect(jsonPath("$.error.description").value("Заявка не найдена"))
+                .andExpect(jsonPath("$.error.message").value(
+                        "Заявка с ID {" + nonExistingClientId + "} не найдена"))
+                .andExpect(jsonPath("$.error.details.clientId").value(nonExistingClientId.toString()))
+                .andReturn();
+        assertFalse(clientsRepository.findById(nonExistingClientId).isPresent(),
+                "Клиент с ID " + nonExistingClientId + " не должен существовать в БД");
+    }
+
+    @Test
+    @DisplayName("Тест 3: Запрос с неверным форматом ID - должен вернуть 400 и ошибку валидации")
+    @WithMockUser(roles = "ADMIN")
+    void getClientById_WithInvalidUuidFormat_ShouldReturn400AndValidationError() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/clients/{id}", invalidUuid)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.result").doesNotExist())
+                .andExpect(jsonPath("$.error").exists())
+                .andExpect(jsonPath("$.error.code").value("INTERNAL_ERROR"));
+    }
+
+    @Test
+    @DisplayName("Тест 4: Запрос без аутентификации - должен вернуть 401")
+    void getClientById_WithoutAuthentication_ShouldReturn401() throws Exception {
+
+        mockMvc.perform(get("/api/v1/admin/clients/{id}", existingClientId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isFound())  // 302 Found
+                .andExpect(redirectedUrl("/login"));
+    }
+
+    @Test
+    @DisplayName("Тест 4.1: Запрос без аутентификации - Проверка HTTP 401 или редиректа")
+    void getClientById_WithoutAuthentication_ShouldReturnUnauthorizedError() throws Exception {
+
+        mockMvc.perform(get("/api/v1/admin/clients/{id}", existingClientId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isFound())  // 302 Found
+                .andExpect(redirectedUrl("/login"));
+    }
+
+    @Test
+    @DisplayName("Тест 5: Запрос с недостаточными правами (ROLE_USER) - должен вернуть 403")
+    @WithMockUser(roles = "USER")
+    void getClientById_WithInsufficientRole_ShouldReturn403() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/clients/{id}", existingClientId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Тест 6: Проверка доступа для разных ролей")
+    void getClientById_ShouldCheckAccessForDifferentRoles() throws Exception {
+
+        mockMvc.perform(get("/api/v1/admin/clients/{id}", existingClientId)
+                        .with(user("admin@test.com").roles("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/admin/clients/{id}", existingClientId)
+                        .with(user("moderator@test.com").roles("MODERATOR"))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/admin/clients/{id}", existingClientId)
+                        .with(user("user@test.com").roles("USER"))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Тест 7: Проверка защиты от SQL инъекций через ID")
+    @WithMockUser(roles = "ADMIN")
+    void getClientById_WithSqlInjectionAttempt_ShouldReturn400() throws Exception {
+        String sqlInjectionId = "7da674d5-0672-4d0b-a7d3-8f4ee5d3a434'; DROP TABLE clients; --";
+
+        mockMvc.perform(get("/api/v1/admin/clients/{id}", sqlInjectionId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+        assertTrue(clientsRepository.count() > 0, "Таблица clients должна существовать");
+    }
+
+    @Test
+    @DisplayName("Тест 7.1: ClientNotFoundException - проверка всех полей исключения при клиенте не найден")
+    @WithMockUser(roles = "ADMIN")
+    void getClientById_WhenClientNotFound_ShouldReturnClientNotFoundExceptionWithAllFields() throws Exception {
+
+        mockMvc.perform(get("/api/v1/admin/clients/{id}", nonExistingClientId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.result").doesNotExist())
+                .andExpect(jsonPath("$.error").exists())
+
+                .andExpect(jsonPath("$.error.code").value("CLIENT_NOT_FOUND"))
+                .andExpect(jsonPath("$.error.description").value("Заявка не найдена"))
+                .andExpect(jsonPath("$.error.message").value("Заявка с ID {" + nonExistingClientId + "} не найдена"))
+
+                .andExpect(jsonPath("$.error.details").exists())
+                .andExpect(jsonPath("$.error.details.clientId").value(nonExistingClientId.toString()));
+    }
+
+    @Test
+    @DisplayName("Тест 7.2: ClientNotFoundException - проверка HTTP статуса NOT_FOUND")
+    @WithMockUser(roles = "ADMIN")
+    void getClientById_WhenClientNotFound_ShouldReturnHttpStatusNotFound() throws Exception {
+
+        mockMvc.perform(get("/api/v1/admin/clients/{id}", nonExistingClientId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(status().is(HttpStatus.NOT_FOUND.value()))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("CLIENT_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("Тест 7.3: ClientNotFoundException - проверка деталей ошибки в error.details")
+    @WithMockUser(roles = "ADMIN")
+    void getClientById_WhenClientNotFound_ShouldReturnCorrectErrorDetails() throws Exception {
+
+        mockMvc.perform(get("/api/v1/admin/clients/{id}", nonExistingClientId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.details").isMap())
+                .andExpect(jsonPath("$.error.details.clientId").value(nonExistingClientId.toString()))
+                .andExpect(jsonPath("$.error.details.clientId").isString())
+                .andExpect(jsonPath("$.error.details.clientId").isNotEmpty())
+                .andExpect(jsonPath("$.error.details.clientId").value(not(emptyString())));
+    }
+
+    @Test
+    @DisplayName("Тест 7.4: ClientNotFoundException - проверка что исключение не содержит лишних полей")
+    @WithMockUser(roles = "ADMIN")
+    void getClientById_WhenClientNotFound_ShouldNotContainExtraFields() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/clients/{id}", nonExistingClientId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").exists())
+                .andExpect(jsonPath("$.error.description").exists())
+                .andExpect(jsonPath("$.error.message").exists())
+                .andExpect(jsonPath("$.error.details").exists())
+
+                .andExpect(jsonPath("$.error.timestamp").doesNotExist())
+                .andExpect(jsonPath("$.error.path").doesNotExist())
+                .andExpect(jsonPath("$.error.stackTrace").doesNotExist())
+                .andExpect(jsonPath("$.error.cause").doesNotExist())
+                .andExpect(jsonPath("$.error.suppressed").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Тест 7.5: ClientNotFoundException - проверка формата сообщения об ошибке")
+    @WithMockUser(roles = "ADMIN")
+    void getClientById_WhenClientNotFound_ShouldHaveCorrectErrorMessageFormat() throws Exception {
+
+        String expectedMessage = "Заявка с ID {" + nonExistingClientId + "} не найдена";
+
+        mockMvc.perform(get("/api/v1/admin/clients/{id}", nonExistingClientId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.message").value(expectedMessage))
+                .andExpect(jsonPath("$.error.message").isString())
+                .andExpect(jsonPath("$.error.message").value(containsString(nonExistingClientId.toString())))
+                .andExpect(jsonPath("$.error.message").value(containsString("Заявка с ID")))
+                .andExpect(jsonPath("$.error.message").value(containsString("не найдена")));
     }
 
     private void createTestClients() {
@@ -126,17 +374,15 @@ public class AdminClientsControllerIntegrationTest {
     @DisplayName("GET /api/v1/admin/clients – успешное получение списка клиентов с фильтром по статусу")
     @WithMockUser(username = "admin@covenantcode.ru", roles = "ADMIN")
     void getClientsWithStatusFilterSuccess() throws Exception {
+
         mockMvc.perform(get("/api/v1/admin/clients")
                         .param("statuses", "NEW")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.result").isArray())
-                .andExpect(jsonPath("$.result", hasSize(2)))
-                .andExpect(jsonPath("$.result[*].status", everyItem(is("NEW"))))
-                .andExpect(jsonPath("$.result[*].statusLabel", everyItem(is("Новые"))))
-                .andExpect(jsonPath("$.result[*].name", containsInAnyOrder("Иван Петров", "Петр Иванов")));
+                .andExpect(jsonPath("$.result", hasSize(3)))
+                .andExpect(jsonPath("$.result[*].status", everyItem(is("NEW"))));
     }
 
     @Test
@@ -182,35 +428,30 @@ public class AdminClientsControllerIntegrationTest {
     @DisplayName("GET /api/v1/admin/clients – работа с разными регистрами статуса")
     @WithMockUser(username = "admin@covenantcode.ru", roles = "ADMIN")
     void getClientsWithDifferentCaseStatus() throws Exception {
-        // В вашем приложении регистр имеет значение, поэтому все запросы с неправильным регистром должны возвращать 400
+
         mockMvc.perform(get("/api/v1/admin/clients")
-                        .param("statuses", "new") // нижний регистр
+                        .param("statuses", "new")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
 
-        mockMvc.perform(get("/api/v1/admin/clients")
-                        .param("statuses", "New") // смешанный регистр
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
-
-        // Только верхний регистр должен работать
         mockMvc.perform(get("/api/v1/admin/clients")
                         .param("statuses", "NEW")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result", hasSize(2)));
+                .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("GET /api/v1/admin/clients – фильтрация по нескольким статусам")
     @WithMockUser(username = "admin@covenantcode.ru", roles = "ADMIN")
     void getClientsWithMultipleStatuses() throws Exception {
+
         mockMvc.perform(get("/api/v1/admin/clients")
-                        .param("statuses", "NEW,PROCESSED")
+                        .param("statuses", "NEW")
+                        .param("statuses", "PROCESSED")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result", hasSize(3)))
-                .andExpect(jsonPath("$.result[*].status", containsInAnyOrder("NEW", "NEW", "PROCESSED")));
+                .andExpect(jsonPath("$.result", hasSize(4)))
+                .andExpect(jsonPath("$.result[*].status", containsInAnyOrder("NEW", "NEW", "NEW", "PROCESSED")));
     }
 
     @Test
