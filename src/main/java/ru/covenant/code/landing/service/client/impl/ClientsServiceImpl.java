@@ -8,17 +8,24 @@ import org.springframework.data.domain.Sort;
 import ru.covenant.code.landing.dto.client.request.ClientsFilterRqDto;
 import ru.covenant.code.landing.dto.client.request.ClientsUpdateRqDto;
 import ru.covenant.code.landing.dto.client.response.ClientsStatsRsDto;
+import ru.covenant.code.landing.dto.client.request.ClientsRqDto;
+import ru.covenant.code.landing.dto.client.response.ClientsCreateRsDto;
+import ru.covenant.code.landing.dto.client.response.ClientsStatsRsDto;
+import ru.covenant.code.landing.dto.client.response.LoginStatsRsDto;
 import ru.covenant.code.landing.entity.Clients;
 import ru.covenant.code.landing.entity.enumerated.CourseType;
 import ru.covenant.code.landing.entity.enumerated.Priority;
 import ru.covenant.code.landing.entity.enumerated.Status;
 import ru.covenant.code.landing.dto.client.response.ClientsAdminRsDto;
 import ru.covenant.code.landing.exceptions.BusinessException;
+import ru.covenant.code.landing.exceptions.ClientDuplicateException;
 import ru.covenant.code.landing.exceptions.ExceptionFactory;
 import ru.covenant.code.landing.exceptions.ValidationException;
+
 import ru.covenant.code.landing.mapper.ClientsMapper;
 import ru.covenant.code.landing.repository.ClientsRepository;
 import ru.covenant.code.landing.service.client.ClientsService;
+import ru.covenant.code.landing.service.client.LoginStatsService;
 import ru.covenant.code.landing.specification.ClientsSpecification;
 import ru.covenant.code.landing.ws.service.WebSocketPublisher;
 
@@ -35,6 +42,8 @@ public class ClientsServiceImpl implements ClientsService {
     private final ClientsSpecification clientsSpecification;
     private final ClientsMapper clientsMapper;
     private final WebSocketPublisher publisher;
+    private final WebSocketPublisher webSocketPublisher;
+    private final LoginStatsService loginStatsService;
 
     @Override
     @Transactional(readOnly = true)
@@ -239,4 +248,34 @@ public class ClientsServiceImpl implements ClientsService {
 
         return stats;
     }
+
+    @Override
+    @Transactional
+    public ClientsCreateRsDto create(ClientsRqDto request) {
+        // Проверка дубликата по email
+        if (clientsRepository.existsByEmail(request.getEmail())) {
+            log.warn("Попытка дублирования заявки для email: {}", request.getEmail());
+            throw new ClientDuplicateException(request.getEmail(),
+                    request.getPhone());
+        }
+
+        // Маппинг DTO → Entity
+        Clients clientEntity = clientsMapper.toNewEntity(request);
+
+        // Сохранение в БД
+        Clients savedClient = clientsRepository.save(clientEntity);
+        log.info("Заявка создана: ID={}, Email={}", savedClient.getId(), savedClient.getEmail());
+
+        // Маппинг Entity → DTO ответа
+//        ClientsCreateRsDto responseDto = clientsMapper.toCreateResponse(savedClient);
+        ClientsAdminRsDto adminResponse = clientsMapper.toAdminResponse(savedClient);
+
+        // Публикация WebSocket событий
+        webSocketPublisher.publishApplicationCreated(adminResponse);
+        LoginStatsRsDto loginStats = loginStatsService.getLoginPageStats();
+        ClientsStatsRsDto clientsStats = clientsMapper.toClientsStats(loginStats); // Теперь работает!
+        webSocketPublisher.publishStatsUpdated(clientsStats);
+        return clientsMapper.toCreateResponse(savedClient);
+    }
+
 }

@@ -7,12 +7,18 @@ import ru.covenant.code.landing.dto.client.request.ClientsUpdateRqDto;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mapstruct.factory.Mappers;
+import org.mockito.InjectMocks;
+import ru.covenant.code.landing.dto.client.request.ClientsRqDto;
 import ru.covenant.code.landing.dto.client.response.ClientsAdminRsDto;
+import ru.covenant.code.landing.dto.client.response.ClientsCreateRsDto;
+import ru.covenant.code.landing.dto.client.response.ClientsStatsRsDto;
+import ru.covenant.code.landing.dto.client.response.LoginStatsRsDto;
 import ru.covenant.code.landing.entity.Clients;
 import ru.covenant.code.landing.entity.enumerated.CourseType;
 import ru.covenant.code.landing.entity.enumerated.Priority;
 import ru.covenant.code.landing.entity.enumerated.Status;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -192,6 +198,66 @@ class ClientsMapperTest {
                 clients.setProcessedAt(OffsetDateTime.now());
             }
         }
+
+        @Override
+        public Clients toNewEntity(ClientsRqDto request) {
+            if (request == null) {
+                return null;
+            }
+
+            Clients client = new Clients();
+            client.setName(request.getName());
+            client.setEmail(request.getEmail());
+            client.setPhone(request.getPhone());
+            client.setMessage(request.getMessage());
+            client.setCourseType(CourseType.valueOf(request.getCourseType()));
+            return client;
+        }
+
+        @Override
+        public ClientsStatsRsDto toClientsStats(LoginStatsRsDto loginStats) {
+            if (loginStats == null) {
+                return null;
+            }
+
+            ClientsStatsRsDto stats = new ClientsStatsRsDto();
+            stats.setTodayCount(loginStats.getTodayApplications());
+            stats.setTotal(loginStats.getTotalApplications());
+            stats.setDoneCount(loginStats.getSuccessfulApplications());
+            stats.setNewCount(0L);
+            stats.setProcessedCount(0L);
+            stats.setFullstackCount(0L);
+            stats.setFrontendCount(0L);
+            stats.setBackendCount(0L);
+            stats.setHighPriorityCount(0L);
+            stats.setMediumPriorityCount(0L);
+            stats.setLowPriorityCount(0L);
+            return stats;
+        }
+
+        @Override
+        public ClientsCreateRsDto toCreateResponse(Clients client) {
+            if (client == null) {
+                return null;
+            }
+
+            ClientsCreateRsDto response = new ClientsCreateRsDto();
+            ClientsCreateRsDto.Result result = new ClientsCreateRsDto.Result();
+
+            result.setId(client.getId());
+            result.setName(client.getName());
+            result.setEmail(client.getEmail());
+            result.setPhone(client.getPhone());
+            result.setCourseType(String.valueOf(client.getCourseType()));
+            result.setCreatedAt(offsetToLocalDateTime(client.getCreatedAt()));
+            result.setStatus("SUCCESS");
+
+            response.setResult(result);
+            response.setMessage("Заявка успешно создана");
+            return response;
+        }
+
+
     };
 
     @Test
@@ -794,5 +860,90 @@ class ClientsMapperTest {
         List<ClientsAdminRsDto> dtoList = clientsMapper.toAdminResponseList(null);
 
         assertNull(dtoList, "При передаче null должен возвращаться null");
+    }
+//    @InjectMocks
+//    private ClientsMapper clientsMapper;
+
+    @Test
+    void toNewEntity_ShouldMapRequestToClientWithDefaults() {
+        // Given
+        ClientsRqDto request = new ClientsRqDto();
+        request.setName("Дмитрий Иванов");
+        request.setEmail("test@example.com");
+        request.setPhone("+79912345678");
+        request.setMessage("Сообщение");
+        request.setCourseType("FULLSTACK");
+
+        // When
+        Clients result = clientsMapper.toNewEntity(request);
+
+        // Then
+        assertNotNull(result);
+        assertEquals("Дмитрий Иванов", result.getName());
+        assertEquals("test@example.com", result.getEmail());
+        assertEquals("+79912345678", result.getPhone());
+        assertEquals("Сообщение", result.getMessage());
+        assertEquals(CourseType.FULLSTACK, result.getCourseType());
+        // Поля, которые должны быть проигнорированы
+        assertNull(result.getId());
+        assertNull(result.getCreatedAt());
+        assertNull(result.getUpdatedAt());
+//        assertNull(result.getStatus());
+//        assertNull(result.getPriority());
+//        assertNull(result.getSource());
+    }
+
+    @Test
+    void toClientsStats_ShouldMapLoginStatsToClientsStatsWithDefaults() {
+        // Given
+        LoginStatsRsDto loginStats = new LoginStatsRsDto();
+        loginStats.setTodayApplications(10L);
+        loginStats.setTotalApplications(100L);
+        loginStats.setSuccessfulApplications(50L);
+
+        // When
+        ClientsStatsRsDto result = clientsMapper.toClientsStats(loginStats);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(10L, result.getTodayCount());
+        assertEquals(100L, result.getTotal());
+        assertEquals(50L, result.getDoneCount());
+        assertEquals(0L, result.getNewCount());
+        assertEquals(0L, result.getProcessedCount());
+        assertEquals(0L, result.getFullstackCount());
+        assertEquals(0L, result.getFrontendCount());
+        assertEquals(0L, result.getBackendCount());
+        assertEquals(0L, result.getHighPriorityCount());
+        assertEquals(0L, result.getMediumPriorityCount());
+        assertEquals(0L, result.getLowPriorityCount());
+    }
+
+    @Test
+    void toCreateResponse_ShouldMapClientToResponse() {
+        // Given
+        UUID clientId = UUID.randomUUID();
+        Clients client = new Clients();
+        client.setId(clientId);
+        client.setName("Дмитрий Иванов");
+        client.setEmail("test@example.com");
+        client.setPhone("+79098765431");
+        client.setCourseType(CourseType.BACKEND);
+        client.setCreatedAt(OffsetDateTime.now());
+
+        // When
+        ClientsCreateRsDto result = clientsMapper.toCreateResponse(client);
+
+        // Then
+        assertNotNull(result);
+        assertNotNull(result.getResult());
+        assertEquals(clientId, result.getResult().getId());
+        assertEquals("Дмитрий Иванов", result.getResult().getName());
+        assertEquals("test@example.com", result.getResult().getEmail());
+        assertEquals("+79098765431", result.getResult().getPhone());
+        assertEquals("BACKEND", result.getResult().getCourseType());
+        assertNotNull(result.getResult().getCreatedAt());
+        assertEquals("SUCCESS", result.getResult().getStatus());
+        assertEquals("Заявка успешно создана", result.getMessage());
     }
 }

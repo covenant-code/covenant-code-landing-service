@@ -2,21 +2,29 @@ package ru.covenant.code.landing.controller;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.http.MediaType;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.junit.jupiter.api.*;
+import ru.covenant.code.landing.service.client.ClientsService;
 
 
-@WebMvcTest(ClientsController.class) //поднимаем только веб слой
+@SpringBootTest
+@AutoConfigureMockMvc // поднимает весь контекст приложения
+@ActiveProfiles("test")
 public class ClientsControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+    @Autowired
+    private ClientsService clientsService;
 
     @Test
     @WithMockUser(username = "test", roles = {"USER"})

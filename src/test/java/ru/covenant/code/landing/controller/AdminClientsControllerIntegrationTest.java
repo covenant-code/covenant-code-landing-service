@@ -552,4 +552,5 @@ class AdminClientsControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isForbidden());
     }
+
 }

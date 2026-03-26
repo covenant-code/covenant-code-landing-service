@@ -23,4 +23,7 @@ public interface ClientsRepository extends JpaRepository<Clients, UUID>, JpaSpec
                                  @Param("end") OffsetDateTime end);
 
     List<Clients> findByStatus(Status status, Sort sort);
+
+    boolean existsByEmail(String email);
+
 }

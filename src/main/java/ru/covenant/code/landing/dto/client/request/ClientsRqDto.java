@@ -4,10 +4,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import ru.covenant.code.landing.entity.enumerated.CourseType;
 
 @Data
 @Builder
@@ -29,6 +31,7 @@ public class ClientsRqDto {
     @Schema(description = "Телефон в формате +7XXXXXXXXXX", example = "+79161234567")
     private String phone;
 
+    @Size(max = 1000, message = "{clients.message.toolong}")
     @Schema(description = "Сообщение клиента", example = "Хотел бы узнать подробнее о курсе по Backend разработке")
     private String message;
 
@@ -38,4 +41,13 @@ public class ClientsRqDto {
 
     @Schema(description = "Источник заявки", example = "Лендинг", defaultValue = "Лендинг")
     private String source;
+
+    // Метод для преобразования строки в Enum
+    public CourseType getCourseTypeEnum() {
+        try {
+            return CourseType.valueOf(this.courseType.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid course type: " + this.courseType);
+        }
+    }
 }
