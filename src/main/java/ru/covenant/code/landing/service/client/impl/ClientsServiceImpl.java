@@ -1,0 +1,281 @@
+package ru.covenant.code.landing.service.client.impl;
+
+import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Sort;
+import ru.covenant.code.landing.dto.client.request.ClientsFilterRqDto;
+import ru.covenant.code.landing.dto.client.request.ClientsUpdateRqDto;
+import ru.covenant.code.landing.dto.client.response.ClientsStatsRsDto;
+import ru.covenant.code.landing.dto.client.request.ClientsRqDto;
+import ru.covenant.code.landing.dto.client.response.ClientsCreateRsDto;
+import ru.covenant.code.landing.dto.client.response.ClientsStatsRsDto;
+import ru.covenant.code.landing.dto.client.response.LoginStatsRsDto;
+import ru.covenant.code.landing.entity.Clients;
+import ru.covenant.code.landing.entity.enumerated.CourseType;
+import ru.covenant.code.landing.entity.enumerated.Priority;
+import ru.covenant.code.landing.entity.enumerated.Status;
+import ru.covenant.code.landing.dto.client.response.ClientsAdminRsDto;
+import ru.covenant.code.landing.exceptions.BusinessException;
+import ru.covenant.code.landing.exceptions.ClientDuplicateException;
+import ru.covenant.code.landing.exceptions.ExceptionFactory;
+import ru.covenant.code.landing.exceptions.ValidationException;
+
+import ru.covenant.code.landing.mapper.ClientsMapper;
+import ru.covenant.code.landing.repository.ClientsRepository;
+import ru.covenant.code.landing.service.client.ClientsService;
+import ru.covenant.code.landing.service.client.LoginStatsService;
+import ru.covenant.code.landing.specification.ClientsSpecification;
+import ru.covenant.code.landing.ws.service.WebSocketPublisher;
+
+import java.time.*;
+import java.util.List;
+import java.util.UUID;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ClientsServiceImpl implements ClientsService {
+
+    private final ClientsRepository clientsRepository;
+    private final ClientsSpecification clientsSpecification;
+    private final ClientsMapper clientsMapper;
+    private final WebSocketPublisher publisher;
+    private final WebSocketPublisher webSocketPublisher;
+    private final LoginStatsService loginStatsService;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ClientsAdminRsDto> getAllClients(ClientsFilterRqDto filter) {
+        log.info("Запрос списка клиентов с фильтром: startDate={}, endDate={}, statuses={}, priorities={}, courseTypes={}, searchQuery={}",
+                filter.getStartDate(), filter.getEndDate(), filter.getStatuses(),
+                filter.getPriorities(), filter.getCourseTypes(), filter.getSearchQuery());
+
+        try {
+            var specification = clientsSpecification.withFilter(filter);
+            var sort = Sort.by(Sort.Direction.DESC, "createdAt");
+
+            var clients = clientsRepository.findAll(specification, sort);
+            log.debug("Найдено {} клиентов", clients.size());
+
+            return clientsMapper.toAdminResponseList(clients);
+
+        } catch (Exception e) {
+            log.error("Ошибка при получении списка клиентов: {}", e.getMessage(), e);
+            throw ExceptionFactory.internalError("Ошибка при получении списка клиентов");
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ClientsAdminRsDto> getClientsByStatus(String status) {
+        log.info("Запрос на получение клиентов со статусом: {}", status);
+
+        try {
+            Status statusEnum = validateAndParseStatus(status);
+            log.debug("Статус успешно преобразован в Enum: {}", statusEnum);
+
+            Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+
+            List<Clients> clients = clientsRepository.findByStatus(statusEnum, sort);
+            log.debug("Найдено {} клиентов со статусом {}", clients.size(), statusEnum);
+
+            return clientsMapper.toAdminResponseList(clients);
+
+        } catch (ValidationException e) {
+            log.warn("Ошибка валидации статуса: {}", e.getMessage());
+            throw e;
+        } catch (IllegalArgumentException e) {
+            log.warn("Передан некорректный статус: {}", status);
+            throw new ValidationException("Некорректный статус: " + status);
+        } catch (Exception e) {
+            log.error("Ошибка при получении клиентов по статусу: {}", status, e);
+            throw new RuntimeException("Внутренняя ошибка сервера при получении клиентов", e);
+        }
+    }
+
+    private Status validateAndParseStatus(String status) {
+        if (status == null || status.trim().isEmpty()) {
+            throw new ValidationException("Статус не может быть пустым");
+        }
+
+        try {
+            return Status.valueOf(status.toUpperCase().trim());
+        } catch (IllegalArgumentException e) {
+            throw new ValidationException("Некорректный статус: " + status);
+        }
+    }
+
+    @Override
+    public ClientsAdminRsDto updateClient(UUID id, ClientsUpdateRqDto dto) {
+        log.info("Обновление клиента");
+
+        try {
+            Clients client = clientsRepository.findById(id)
+                    .orElseThrow(() -> ExceptionFactory.clientNotFound(id));
+
+            validateClientUpdate(dto);
+
+            clientsMapper.updateEntity(client, dto);
+
+            Clients updateClients = clientsRepository.save(client);
+
+            ClientsAdminRsDto response = clientsMapper.toAdminResponse(updateClients);
+
+//            // 1. Предварительная валидация формата (email, phone)
+//            // 2. Очистка невалидных enum-значений, чтобы MapStruct их проигнорировал
+//            ClientsUpdateRqDto validatedDto = sanitizeAndValidateDto(dto);
+//
+//            // MapStruct обновит только те поля, которые не null в validatedDto
+//            clientsMapper.updateEntity(client, validatedDto);
+//
+//            Clients updatedClient = clientsRepository.save(client);
+//            ClientsAdminRsDto response = clientsMapper.toAdminResponse(updatedClient);
+
+
+
+            try {
+                publisher.publishApplicationUpdated(response);
+
+                ClientsStatsRsDto stats = getStats();
+                publisher.publishStatsUpdated(stats);
+
+                log.debug("Отправлены WebSocket уведомления для клиента {}", id);
+            } catch (Exception e) {
+                log.warn("Ошибка при отправке WebSocket уведомлений: {}", e.getMessage());
+            }
+            return response;
+        } catch (BusinessException e) {
+            log.warn("Бизнес-ошибка при обновлении клиента");
+            throw e;
+        } catch (Exception e) {
+            log.error("Ошибка БД при обновлении клиента");
+            throw ExceptionFactory.persistenceError("Clients", "обновление", e);        }
+
+
+    }
+    @Override
+    @Transactional(readOnly = true)
+    public ClientsAdminRsDto getClientById(UUID id) {
+        log.info("Поиск пользователя по id {}", id);
+
+        Clients clients = clientsRepository.findById(id).orElseThrow(
+                ()-> {
+                    log.warn("Пользователь с id {} не найден", id);
+                    return ExceptionFactory.clientNotFound(id);
+                }
+        );
+
+        log.debug("Пользователь с id {}", id);
+        return clientsMapper.toAdminResponse(clients);
+    }
+
+    private void validateClientUpdate(ClientsUpdateRqDto dto) {
+
+        if (dto.getEmail() != null && !dto.getEmail().contains("@")) {
+            throw new ValidationException("Email должен содержать символ '@'");
+        }
+
+        if (dto.getPhone() != null && !dto.getPhone().matches("^\\+7[0-9]{10}$")) {
+            throw new ValidationException("Телефон должен быть в формате +7XXXXXXXXXX");
+        }
+
+        if (dto.getStatus() != null && !dto.getStatus().isBlank()) {
+            try {
+                Status.valueOf(dto.getStatus().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new ValidationException("Некорректный статус: " + dto.getStatus());
+            }
+        }
+
+        if (dto.getPriority() != null && !dto.getPriority().isBlank()) {
+            try {
+                Priority.valueOf(dto.getPriority().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new ValidationException("Некорректный приоритет: " + dto.getPriority());
+            }
+        }
+
+        if (dto.getCourseType() != null && !dto.getCourseType().isBlank()) {
+            try {
+                CourseType.valueOf(dto.getCourseType().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new ValidationException("Некорректный тип курса: " + dto.getCourseType());
+            }
+        }
+    }
+
+    private ClientsStatsRsDto getStats() {
+        ClientsStatsRsDto stats = new ClientsStatsRsDto();
+
+        try {
+            stats.setTotal(clientsRepository.count());
+
+            stats.setNewCount(clientsRepository.countByStatus(Status.NEW));
+            stats.setProcessedCount(clientsRepository.countByStatus(Status.PROCESSED));
+            stats.setDoneCount(clientsRepository.countByStatus(Status.DONE));
+
+            OffsetDateTime startOfDay = LocalDate.now().atStartOfDay().atOffset(ZoneOffset.UTC);
+            OffsetDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX).atOffset(ZoneOffset.UTC);
+            stats.setTodayCount(clientsRepository.countByCreatedAtBetween(startOfDay, endOfDay));
+
+            stats.setFullstackCount(0L);
+            stats.setFrontendCount(0L);
+            stats.setBackendCount(0L);
+            stats.setHighPriorityCount(0L);
+            stats.setMediumPriorityCount(0L);
+            stats.setLowPriorityCount(0L);
+
+            log.debug("Статистика получена: total={}, new={}, processed={}, done={}, today={}",
+                    stats.getTotal(), stats.getNewCount(), stats.getProcessedCount(),
+                    stats.getDoneCount(), stats.getTodayCount());
+
+        } catch (Exception e) {
+            log.error("Ошибка при получении статистики", e);
+            stats.setTotal(0);
+            stats.setNewCount(0);
+            stats.setProcessedCount(0);
+            stats.setDoneCount(0);
+            stats.setTodayCount(0);
+            stats.setFullstackCount(0);
+            stats.setFrontendCount(0);
+            stats.setBackendCount(0);
+            stats.setHighPriorityCount(0);
+            stats.setMediumPriorityCount(0);
+            stats.setLowPriorityCount(0);
+        }
+
+        return stats;
+    }
+
+    @Override
+    @Transactional
+    public ClientsCreateRsDto create(ClientsRqDto request) {
+        // Проверка дубликата по email
+        if (clientsRepository.existsByEmail(request.getEmail())) {
+            log.warn("Попытка дублирования заявки для email: {}", request.getEmail());
+            throw new ClientDuplicateException(request.getEmail(),
+                    request.getPhone());
+        }
+
+        // Маппинг DTO → Entity
+        Clients clientEntity = clientsMapper.toNewEntity(request);
+
+        // Сохранение в БД
+        Clients savedClient = clientsRepository.save(clientEntity);
+        log.info("Заявка создана: ID={}, Email={}", savedClient.getId(), savedClient.getEmail());
+
+        // Маппинг Entity → DTO ответа
+//        ClientsCreateRsDto responseDto = clientsMapper.toCreateResponse(savedClient);
+        ClientsAdminRsDto adminResponse = clientsMapper.toAdminResponse(savedClient);
+
+        // Публикация WebSocket событий
+        webSocketPublisher.publishApplicationCreated(adminResponse);
+        LoginStatsRsDto loginStats = loginStatsService.getLoginPageStats();
+        ClientsStatsRsDto clientsStats = clientsMapper.toClientsStats(loginStats); // Теперь работает!
+        webSocketPublisher.publishStatsUpdated(clientsStats);
+        return clientsMapper.toCreateResponse(savedClient);
+    }
+
+}

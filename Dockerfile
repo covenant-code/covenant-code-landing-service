@@ -1,18 +1,22 @@
-# Используем официальный образ Amazon Corretto 21 (JDK 21 на базе Alpine Linux)
-FROM amazoncorretto:21-alpine
+# Этап 1: Сборка
+FROM maven:3.9-eclipse-temurin-21 AS builder
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn clean package -DskipTests
 
-# Устанавливаем рабочую директорию внутри контейнера
-# Все последующие команды (COPY, RUN и т.д.) будут выполняться относительно этой папки
+# Этап 2: Запуск
+FROM amazoncorretto:21
+
 WORKDIR /app
 
-# Копируем собранный jar-файл приложения в контейнер
-# target/covenant-code-landing-service-0.0.1-SNAPSHOT.jar — это результат сборки Spring Boot
-# В контейнере файл будет доступен как app.jar
-COPY target/covenant-code-landing-service-0.0.1-SNAPSHOT.jar app.jar
+# Копируем JAR из первого этапа (builder)
+COPY --from=builder /app/target/*.jar app.jar
 
-# Открываем порт 8082, чтобы приложение было доступно извне контейнера
-EXPOSE 8082
+# Создаем пользователя для безопасности
+# RUN addgroup -S spring && adduser -S spring -G spring
+# USER spring:spring
 
-# Указываем команду, которая будет выполняться при старте контейнера
-# java -jar app.jar — запускает Spring Boot приложение
+EXPOSE 8080
+
 ENTRYPOINT ["java", "-jar", "app.jar"]

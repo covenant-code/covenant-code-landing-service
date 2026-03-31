@@ -1,0 +1,32 @@
+package ru.covenant.code.landing.dto.admin.response;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@Schema(description = "Ответ на аутентификацию администратора")
+@NoArgsConstructor
+@AllArgsConstructor
+public class AdminLoginRsDto {
+
+    @Schema(description = "Успешность операции", example = "true")
+    private boolean success;
+
+    @Schema(description = "Сообщение о результате", example = "Авторизация успешна")
+    private String message;
+
+    @Schema(description = "Статус аутентификации", example = "true")
+    private boolean authenticated;
+
+    @Schema(description = "Email администратора", example = "admin@covenantcode.ru")
+    private String email;
+
+    @Schema(description = "Роль администратора",
+            allowableValues = {"SUPER_ADMIN", "ADMIN", "MODERATOR", "SUPPORT"},
+            example = "ADMIN")
+    private String role;
+}
